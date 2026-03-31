@@ -1,0 +1,75 @@
+server:
+  port: 8081
+
+spring:
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 3319640549@qq.com
+    password: ufxreptcanfwcheg
+    protocol: smtps
+    default-encoding: UTF-8
+    properties:
+      smtp:
+        auth: true
+        ssl:
+          enable: true
+          protocols: TLSv1.2
+        starttls:
+          enable: true
+      debug: false
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: Yangyijia12138
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+
+  data:
+    redis:
+      host:
+      port: 6379
+      password:
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+# MyBatis ??
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.yifasilverguard.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+logging:
+  level:
+    root: info
+    com.yifasilverguard: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# JWT??
+security:
+  jwt:
+    header: Authorization
+    token-start-with: Bearer
+    base64-secret: YifaSilverGuard2024SecretKeyForJWTTokenGenerationMustBeLongEnough88Bits
+    token-validity-seconds: 86400
+    ignore-paths:
+      - /api/v1/codes/**
+      - /api/v1/users
+      - /api/v1/users/login
+      - /api/v1/password-reset
+      - /error
+    admin-paths:
+      - /api/v1/admin/**

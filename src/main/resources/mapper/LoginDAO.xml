@@ -33,6 +33,34 @@
     <select id="selectUserById" resultMap="UserMap">
         SELECT * FROM sys_user WHERE id = #{id}
     </select>
+    <!-- 根据手机号查询 -->
+    <select id="selectUserByPhone" resultMap="UserMap">
+        SELECT * FROM sys_user WHERE phone = #{phone}
+    </select>
+    <!-- 动态更新：只更新非空字段 -->
+    <update id="updateUserSelective" parameterType="com.yifasilverguard.entity.User">
+        UPDATE sys_user
+        <set>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+    <!-- 逻辑删除用户 -->
+    <update id="logout">
+        UPDATE sys_user
+        SET status = 0, update_time = NOW()
+        WHERE id = #{userId}
+    </update>
+    <!-- 删除家属绑定-->
+    <update id="deleteFamilybind">
+        update family_bind
+        SET status = 0
+        WHERE family_user_id = #{userId}
+    </update>
 
     <update id="updateUserById">
         UPDATE sys_user

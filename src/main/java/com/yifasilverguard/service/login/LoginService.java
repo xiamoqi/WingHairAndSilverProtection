@@ -1,6 +1,7 @@
 package com.yifasilverguard.service.login;
 
 import com.yifasilverguard.dto.login.*;
+import com.yifasilverguard.dto.user.UpdateUserInfoDTO;
 import com.yifasilverguard.vo.login.LoginVO;
 import com.yifasilverguard.vo.login.UserDetail;
 
@@ -25,4 +26,10 @@ public interface LoginService {
 
     // 添加退出登录方法
     void logout(String jwt);
+
+    // 修改个人信息
+    void updateUserInfo(Long userId,UpdateUserInfoDTO updateUserInfoDTO);
+
+    //用户注销（status=0）同时清除该用户关联的家属绑定关系
+    void cancelUser(Long userId);
 }

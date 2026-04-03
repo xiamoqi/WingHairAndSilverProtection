@@ -2,10 +2,14 @@ package com.yifasilverguard.service.login.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.yifasilverguard.config.SecurityProperties;
+import com.yifasilverguard.constant.ErrorConstant;
 import com.yifasilverguard.constant.LoginConstant;
+import com.yifasilverguard.dao.ElderInfoDAO;
 import com.yifasilverguard.dao.LoginDAO;
 import com.yifasilverguard.dto.login.*;
+import com.yifasilverguard.dto.user.UpdateUserInfoDTO;
 import com.yifasilverguard.entity.User;
+import com.yifasilverguard.exception.BusinessException;
 import com.yifasilverguard.service.EmailService;
 import com.yifasilverguard.service.login.LoginService;
 import com.yifasilverguard.utils.BaseContext;
@@ -17,6 +21,7 @@ import com.yifasilverguard.vo.login.UserDetail;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -251,5 +256,65 @@ public class LoginServiceImpl implements LoginService {
         stringRedisTemplate.opsForValue().set(key, code, 5, TimeUnit.MINUTES);
         emailService.sendCode(email, code);
         return code;
+    }
+    // 修改用户信息
+    @Override
+    public void updateUserInfo(Long userId, UpdateUserInfoDTO updateUserInfoDTO) {
+        //检查用户是否存在
+        User user=loginDAO.selectUserById(userId);
+        if(user==null){
+            throw new BusinessException(ErrorConstant.USER_NOT_EXIST);
+        }
+        //如果修改手机号，检查新手机号是否已被其他用户占用
+        if(updateUserInfoDTO.getPhone()!=null&&!updateUserInfoDTO.getPhone().equals(user.getPhone())){
+            User existUser=loginDAO.selectUserByPhone(updateUserInfoDTO.getPhone());
+            if(existUser!=null && !existUser.getId().equals(userId)){
+                throw new BusinessException(ErrorConstant.PHONE_ALREADY_EXIST);
+            }
+        }
+        //如果修改邮箱，检查是否已被占用
+        if(updateUserInfoDTO.getEmail()!=null&&!updateUserInfoDTO.getEmail().equals(user.getEmail())){
+            User existUser=loginDAO.selectUserByEmail(updateUserInfoDTO.getEmail());
+            if(existUser!=null && !existUser.getId().equals(userId)){
+                throw new BusinessException(ErrorConstant.EMAIL_ALREADY_EXIST);
+            }
+        }
+        //将更新内容拷贝到用户对象(不覆盖 id、密码等）
+        BeanUtils.copyProperties(updateUserInfoDTO,user,"id","username","password","role","status","createTime","updateTime");
+        //更新用户信息
+        int rows=loginDAO.updateUserSelective(user);
+        if(rows!=1){
+            throw new BusinessException("修改失败，请重试");
+        }
+    }
+    @Autowired
+    private ElderInfoDAO elderInfoDAO;
+    @Override
+    public void cancelUser(Long userId) {
+        //检查用户是否存在且状态正常
+        User user=loginDAO.selectUserById(userId);
+        if(user==null||user.getStatus()!=1){
+            throw new BusinessException(ErrorConstant.USER_NOT_EXIST);
+        }
+        // 更新用户状态为取消
+        int rows=loginDAO.logout(userId);
+        if(rows!=1){
+            throw new BusinessException(ErrorConstant.CANCELED_FAILED);
+        }
+        //如果是老人注销，那么老人信息那里改状态为0
+        if(user.getRole()==1){
+            elderInfoDAO.softDeleteByUserId(userId);
+        }
+
+        //如果是家属注销，那么关联表那里要改状态为0
+        if(user.getRole()==2){
+            loginDAO.deleteFamilybind(userId);
+        }
+
+        //清除 Redis 中的 token（假设存储 key = "token:" + userId）
+        String jwt = BaseContext.getCurrentJwt();
+        if (jwt != null) {
+            stringRedisTemplate.delete(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
+        }
     }
 }

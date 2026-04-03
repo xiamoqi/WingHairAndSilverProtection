@@ -4,6 +4,7 @@ import cn.hutool.core.lang.Validator;
 import cn.hutool.core.util.ObjectUtil;
 import com.yifasilverguard.constant.LoginConstant;
 import com.yifasilverguard.dto.login.*;
+import com.yifasilverguard.dto.user.UpdateUserInfoDTO;
 import com.yifasilverguard.entity.Result;
 import com.yifasilverguard.service.login.LoginService;
 import com.yifasilverguard.utils.BaseContext;
@@ -169,4 +170,28 @@ public class LoginController {
         }
         return Result.success("退出成功");
     }
+
+    /**
+     * 修改个人信息
+     */
+    @PostMapping("/users/info")
+    public Result<?> updateUserInfo(@RequestBody UpdateUserInfoDTO updateUserInfoDTO) {
+        System.out.println("接收到的 DTO: phone=" + updateUserInfoDTO.getPhone() +
+                ", nickname=" + updateUserInfoDTO.getNickname());
+        Long userId = BaseContext.getCurrentUserId();
+        System.out.println("当前登录用户ID = " + userId);
+        loginService.updateUserInfo(userId,updateUserInfoDTO);
+        return Result.success("修改成功");
+    }
+
+    /**
+     * 注销用户
+     */
+    @DeleteMapping("/users/canel")
+    public Result<?> cancelUser() {
+        Long userId = BaseContext.getCurrentUserId();
+        loginService.cancelUser(userId);
+        return Result.success("注销成功");
+    }
+
 }

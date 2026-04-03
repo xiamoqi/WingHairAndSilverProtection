@@ -12,5 +12,6 @@ public interface FamilyBindDAO {
     FamilyBind selectById(Long id);
     List<FamilyBind> selectByFamilyUserId(@Param("familyUserId") Long familyUserId);
     List<FamilyBind> selectByElderId(@Param("elderId") Long elderId);
+    //根据家属ID和老人ID更新状态为0（解除绑定)
     void deleteByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderId") Long elderId);
 }

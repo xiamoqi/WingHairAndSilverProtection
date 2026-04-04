@@ -9,6 +9,10 @@ public class RegisterDTO {
      */
     String email;
     /**
+     * 手机号（用于登录）
+     */
+    String phone;
+    /**
      * 用户名（用于登录）
      */
     String username;

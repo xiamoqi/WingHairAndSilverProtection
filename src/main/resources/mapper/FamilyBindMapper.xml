@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yifasilverguard.dao.FamilyBindDAO">
+<mapper namespace="com.yiguardsilverfa.dao.FamilyBindDAO">
     <resultMap id="BaseResultMap" type="com.yiguardsilverfa.dao.FamilyBindDAO">
         <id column="id" property="id"/>
         <result column="family_user_id" property="familyUserId"/>
@@ -11,6 +11,12 @@
 
 
     </resultMap>
+
+    <!--增加档案联系-->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO family_bind (family_user_id, elder_id, relation, status, create_time)
+        VALUES (#{familyUserId}, #{elderId}, #{relation}, #{status}, NOW())
+    </insert>
 
     <!--删除老人档案-->
     <update id="deleteByFamilyAndElder">

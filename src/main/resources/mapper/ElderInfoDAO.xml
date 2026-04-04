@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yifasilverguard.dao.ElderInfoDAO">
+<mapper namespace="com.yiguardsilverfa.dao.ElderInfoDAO">
 
     <resultMap id="ElderInfoMap" type="com.yiguardsilverfa.entity.ElderInfo">
         <id column="id" property="id"/>
@@ -27,7 +27,7 @@
     </insert>
 
     <select id="selectElderInfoByUserId" resultMap="ElderInfoMap">
-        SELECT * FROM elder_info WHERE user_id = #{userId}
+        SELECT * FROM elder_info WHERE user_id = #{userId} AND status = 1
     </select>
 
     <update id="updateElderInfoById">
@@ -57,7 +57,7 @@
     <update id="softDeleteById">
         update elder_info
         set status = 0, update_time = NOW()
-        where id = #{id}
+        where id = #{id} AND status = 1
     </update>
 
     <!--根据userid逻辑删除-->
@@ -71,6 +71,6 @@
     <update id="restoreById">
         update elder_info
         set status = 1, update_time = NOW()
-        where id = #{id}
+        where id = #{id} AND status = 0
     </update>
 </mapper>

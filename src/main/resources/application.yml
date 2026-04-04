@@ -20,15 +20,15 @@ spring:
       debug: false
 
   datasource:
-    url: jdbc:mysql://localhost:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://yiguard-mysql:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
-    password: 1234
+    password: yiguard260404
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 
   data:
     redis:
-      host: 192.168.195.136
+      host: yiguard-redis
       port: 6379
       password:
       database: 0

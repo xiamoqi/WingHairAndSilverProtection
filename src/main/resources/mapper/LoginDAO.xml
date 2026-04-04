@@ -2,14 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yifasilverguard.dao.LoginDAO">
 
-    <resultMap id="UserMap" type="com.yifasilverguard.entity.User">
+    <resultMap id="UserMap" type="com.yiguardsilverfa.entity.User">
         <id column="id" property="id"/>
         <result column="username" property="username"/>
         <result column="email" property="email"/>
         <result column="password" property="password"/>
         <result column="nickname" property="nickname"/>
         <result column="phone" property="phone"/>
-        <result column="phone_bound" property="phoneBound"/>
         <result column="role" property="role"/>
         <result column="avatar" property="avatar"/>
         <result column="status" property="status"/>
@@ -18,8 +17,8 @@
     </resultMap>
 
     <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO sys_user (username, email, password, nickname, phone, phone_bound, role, status, create_time, update_time)
-        VALUES (#{username}, #{email}, #{password}, #{nickname}, #{phone}, #{phoneBound}, #{role}, #{status}, NOW(), NOW())
+        INSERT INTO sys_user (username, email, password, nickname, phone, role, status, create_time, update_time)
+        VALUES (#{username}, #{email}, #{password}, #{nickname}, #{phone}, #{role}, #{status}, NOW(), NOW())
     </insert>
 
     <select id="selectUserByUsername" resultMap="UserMap">
@@ -38,7 +37,7 @@
         SELECT * FROM sys_user WHERE phone = #{phone}
     </select>
     <!-- 动态更新：只更新非空字段 -->
-    <update id="updateUserSelective" parameterType="com.yifasilverguard.entity.User">
+    <update id="updateUserSelective" parameterType="com.yiguardsilverfa.entity.User">
         UPDATE sys_user
         <set>
             <if test="nickname != null">nickname = #{nickname},</if>
@@ -89,10 +88,4 @@
     <select id="checkEmailExists" resultType="int">
         SELECT COUNT(*) FROM sys_user WHERE email = #{email}
     </select>
-
-    <update id="bindPhone">
-        UPDATE sys_user SET phone = #{phone}, phone_bound = 1, update_time = NOW()
-        WHERE id = #{userId}
-    </update>
-
 </mapper>

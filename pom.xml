@@ -8,10 +8,10 @@
         <version>3.2.5</version>
         <relativePath/>
     </parent>
-    <groupId>com.yifasilverguard</groupId>
-    <artifactId>yifa-silver-guard</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>YifaSilverGuard</name>
+    <groupId>com.yiguardsilverfa</groupId>
+    <artifactId>yi-guard-silver-fa</artifactId>
+    <version>1.0</version>
+    <name>YiGuardSilverFa</name>
     <description>翼护银发 - 基于RAG与边缘感知的智慧康养数字管家系统</description>
 
     <properties>
@@ -81,13 +81,21 @@
             <version>${java-jwt.version}</version>
         </dependency>
 
-        <!-- Jackson (Spring Boot 已经包含，不需要单独添加) -->
-
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.83</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
         </dependency>
     </dependencies>
 

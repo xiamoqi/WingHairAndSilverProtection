@@ -20,15 +20,15 @@ spring:
       debug: false
 
   datasource:
-    url: jdbc:mysql://localhost:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://yiguard-mysql:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
-    password: 1234
+    password: yiguard260404
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 
   data:
     redis:
-      host: 192.168.195.136
+      host: yiguard-redis
       port: 6379
       password:
       database: 0
@@ -43,10 +43,10 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
-# MyBatis ??
+# MyBatis 配置
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.yifasilverguard.entity
+  type-aliases-package: com.yiguardsilverfa.entity
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -54,11 +54,11 @@ mybatis:
 logging:
   level:
     root: info
-    com.yifasilverguard: debug
+    com.yiguardsilverfa: debug
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
-# JWT??
+# JWT配置
 security:
   jwt:
     header: Authorization
@@ -73,3 +73,12 @@ security:
       - /error
     admin-paths:
       - /api/v1/admin/**
+
+# 百度语音API配置
+baidu:
+  asr:
+    api-key: fmWJroACG3CYz7Telec6sZHx
+    secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3
+  tts:
+    api-key: fmWJroACG3CYz7Telec6sZHx
+    secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3

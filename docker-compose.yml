@@ -1,0 +1,47 @@
+version: '3.8'
+
+networks:
+  yiguard-network:
+    driver: bridge
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: yiguard-mysql
+    restart: always
+    networks:
+      - yiguard-network
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: yiguard260404
+      MYSQL_DATABASE: yifa_silver_guard
+    expose:
+      - 3306
+
+  redis:
+    image: redis:7
+    container_name: yiguard-redis
+    restart: always
+    networks:
+      - yiguard-network
+    volumes:
+      - ./redis/data:/data
+    command: redis-server --appendonly yes
+    expose:
+      - 6379
+
+  app:
+    build: .
+    container_name: yiguard-app
+    restart: always
+    networks:
+      - yiguard-network
+    ports:
+      - "8082:8081"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: prod

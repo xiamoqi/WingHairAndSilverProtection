@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yifasilverguard.dao.HealthQaDAO">
+
+    <resultMap id="HealthQaMap" type="com.yiguardsilverfa.entity.HealthQa">
+        <id column="id" property="id"/>
+        <result column="elder_id" property="elderId"/>
+        <result column="question" property="question"/>
+        <result column="answer" property="answer"/>
+        <result column="is_emergency" property="isEmergency"/>
+        <result column="ask_time" property="askTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO health_qa (elder_id, question, answer, is_emergency, ask_time)
+        VALUES (#{elderId}, #{question}, #{answer}, #{isEmergency}, #{askTime})
+    </insert>
+
+    <select id="selectByElderId" resultMap="HealthQaMap">
+        SELECT * FROM health_qa WHERE elder_id = #{elderId} ORDER BY ask_time DESC
+    </select>
+
+    <select id="selectEmergencyQuestions" resultMap="HealthQaMap">
+        SELECT * FROM health_qa
+        WHERE elder_id = #{elderId} AND is_emergency = 1
+        ORDER BY ask_time DESC
+    </select>
+
+</mapper>

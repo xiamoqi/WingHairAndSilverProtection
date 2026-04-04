@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+logs/
+mysql/
+redis/
+*.log
+*.tmp
+.DS_Store

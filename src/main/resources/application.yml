@@ -20,15 +20,15 @@ spring:
       debug: false
 
   datasource:
-    url: jdbc:mysql://yiguard-mysql:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/yifa_silver_guard?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
-    password: yiguard260404
+    password: Yangyijia12138
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 
   data:
     redis:
-      host: yiguard-redis
+      host: 192.168.248.202
       port: 6379
       password:
       database: 0
@@ -85,6 +85,4 @@ llm:
 
 qianfan:
   api:
-    key: 你的百度API Key
-  secret:
-    key: 你的百度Secret Key
+    key: bce-v3/ALTAK-LmVxXdwBEHI0P4f0b8gi3/81de5502168b1de7c47f06b21d3622c058575de6

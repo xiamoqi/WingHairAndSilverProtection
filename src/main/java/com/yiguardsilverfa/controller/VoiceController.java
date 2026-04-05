@@ -3,7 +3,7 @@ package com.yiguardsilverfa.controller;
 import com.yiguardsilverfa.dto.TextChatRequest;
 import com.yiguardsilverfa.dto.VoiceResponse;
 import com.yiguardsilverfa.entity.Result;
-import com.yiguardsilverfa.service.VoiceService;
+import com.yiguardsilverfa.service.Voice.VoiceService;
 import com.yiguardsilverfa.utils.BaseContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

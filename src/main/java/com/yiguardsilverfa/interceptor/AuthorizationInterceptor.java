@@ -79,7 +79,17 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         String jwt = token.substring(properties.getTokenStartWith().length());
         // token不为空，开始解析
         String s = stringRedisTemplate.opsForValue().get(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
-        Long userId = s != null ? Long.valueOf(s) : null;
+        Long userId = null;
+
+        if (s != null && !s.trim().isEmpty()) {
+            try {
+                userId = Long.valueOf(s.trim());
+            } catch (NumberFormatException e) {
+                log.error("Redis中存储的token值不是有效数字，已清除: {}", s);
+                // 清除无效的缓存
+                stringRedisTemplate.delete(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
+            }
+        }
         if (userId == null) {
             try {
                 writer = response.getWriter();

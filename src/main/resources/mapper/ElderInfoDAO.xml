@@ -33,6 +33,7 @@
     <update id="updateElderInfoById">
         UPDATE elder_info
         <set>
+            <if test="userId != null">user_id = #{userId},</if>
             <if test="age != null">age = #{age},</if>
             <if test="gender != null">gender = #{gender},</if>
             <if test="height != null">height = #{height},</if>

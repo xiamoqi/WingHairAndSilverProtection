@@ -7,7 +7,7 @@ import java.util.List;
 
 @Mapper
 public interface FamilyBindDAO {
-    void insert(FamilyBind familyBind);
+    int insert(FamilyBind familyBind);
     void update(FamilyBind familyBind);
     FamilyBind selectById(Long id);
     List<FamilyBind> selectByFamilyUserId(@Param("familyUserId") Long familyUserId);

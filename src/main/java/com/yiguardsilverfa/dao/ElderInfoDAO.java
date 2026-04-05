@@ -4,6 +4,8 @@ import com.yiguardsilverfa.entity.ElderInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface ElderInfoDAO {
 
@@ -15,7 +17,7 @@ public interface ElderInfoDAO {
     /**
      * 根据用户ID查询老人信息
      */
-    ElderInfo selectElderInfoByUserId(@Param("userId") Long userId);
+    List<ElderInfo> selectElderInfoByUserId(@Param("userId") Long userId);
 
     /**
      * 根据老人ID更新信息

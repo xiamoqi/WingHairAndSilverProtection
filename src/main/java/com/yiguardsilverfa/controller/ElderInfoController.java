@@ -9,6 +9,8 @@ import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/elderInfo")
 public class ElderInfoController {
@@ -37,11 +39,14 @@ public class ElderInfoController {
         return Result.success("修改档案成功");
     }
 
-    //家属删除档案【未完成】
+    /**
+     * 家属删除档案
+     * @param id:档案的id
+     * @return
+     */
+
     @DeleteMapping("/delete/{id}")
     public Result<?> deleteElderInfo(@PathVariable Long id) {
-        //判断是否是家属
-
         elderInfoService.deleteElderInfo(id);
         return Result.success("删除成功");
     }
@@ -57,9 +62,9 @@ public class ElderInfoController {
     }
 
     //根据用户ID查询档案
-    @GetMapping("/user/{userId}")
+    @PostMapping("/user/{userId}")
     public Result<?> getElderInfoByUserId(@PathVariable Long userId) {
-        ElderInfo info = elderInfoService.getElderInfoByUserId(userId);
+        List<ElderInfo> info = elderInfoService.getElderInfoByUserId(userId);
         if (info == null) {
             return Result.success(null); // 或返回空数据，前端自行处理
         }

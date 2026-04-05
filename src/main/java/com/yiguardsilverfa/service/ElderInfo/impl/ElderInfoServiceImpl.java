@@ -16,6 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class ElderInfoServiceImpl implements ElderInfoService {
 
@@ -64,8 +67,8 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         if(currentRole==1){
             //如果是老人，则检验是否已有档案，若有，则不能添加
             //检查该老人是否已有自己的档案
-            ElderInfo existing = elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
-            if (existing != null && existing.getStatus() == 1) {
+            List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
+            if (existing != null && existing.isEmpty()&&existing.get(0).getStatus()==1) {
                 throw new BusinessException("您只能添加自己的档案,您档案档案已存在，不能重复添加");
             }
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
@@ -77,17 +80,22 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             if(addDTO.getRelation()==null|| addDTO.getRelation().isEmpty()){
                 throw new BusinessException("家属添加档案时必须填写与老人的关系");
             }
+            elderInfo.setUserId(null);
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
                 throw new BusinessException("添加档案失败");
             }
+            Long elderInfoId=elderInfo.getId();// 获取自动生成的主键
             // 同时插入家属绑定关系
             FamilyBind bind = new FamilyBind();
             bind.setFamilyUserId(currentUserId);
-            bind.setElderId(addDTO.getUserId());
+            bind.setElderId(elderInfoId);
             bind.setRelation(addDTO.getRelation());
             bind.setStatus(1); // 绑定中
-            familyBindDAO.insert(bind);
+            int bindRows = familyBindDAO.insert(bind);
+            if (bindRows != 1) {
+                throw new BusinessException("添加家属绑定关系失败");
+            }
         }else {
             throw new BusinessException("只有老人或家属可以添加档案");
         }
@@ -183,13 +191,13 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
 
     @Override
-    public ElderInfo getElderInfoByUserId(Long userId) {
+    public List<ElderInfo> getElderInfoByUserId(Long userId) {
         if (userId==null){
             throw new BusinessException("用户ID不能为空");
         }
-        ElderInfo info=elderInfoDAO.selectElderInfoByUserId(userId);
-        if(info==null) {
-            throw new BusinessException("档案不存在");
+        List<ElderInfo> info=elderInfoDAO.selectElderInfoByUserId(userId);
+        if(info==null||info.isEmpty()) {
+            return new ArrayList<>();
         }
         return info;
     }

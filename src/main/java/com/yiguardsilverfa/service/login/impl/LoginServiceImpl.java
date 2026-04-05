@@ -271,6 +271,8 @@ public class LoginServiceImpl implements LoginService {
         //如果是家属注销，那么关联表那里要改状态为0
         if(user.getRole()==2){
             loginDAO.deleteFamilybind(userId);
+            //同时在elderInfo 表中逻辑删除该关联的信息
+            elderInfoDAO.softDeleteByUserId(userId);
         }
 
         //清除 Redis 中的 token（假设存储 key = "token:" + userId）

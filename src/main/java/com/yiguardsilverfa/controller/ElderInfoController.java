@@ -3,6 +3,9 @@ package com.yiguardsilverfa.controller;
 
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
+import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
+import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
+import com.yiguardsilverfa.dto.user.SearchUserNameDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
@@ -70,4 +73,32 @@ public class ElderInfoController {
         }
         return Result.success(info);
     }
+
+    /**
+     * 家属绑定档案所对应的老人账号
+     * 老人档案是没有绑定老人用户
+     */
+    @PostMapping("/bind-account")
+    public Result<?> bindElderAccount(@RequestBody BindElderAccountDTO bindDTO) {
+        elderInfoService.bindElderAccount(bindDTO);
+        return Result.success("绑定成功");
+    }
+
+    /**
+     * 通过username查找对应的user信息
+     */
+    @PostMapping("/search/byusername")
+    public Result<?> searchUsername(@RequestBody SearchUserNameDTO request) {
+        String username = request.getUsername();
+        if (username == null || username.trim().isEmpty()) {
+            return Result.failure("用户名不能为空");
+        }
+        SearchUserInfoDTO userInfo = elderInfoService.getUserByUsername(username);
+        return Result.success(userInfo);
+    }
+
+    /**
+     * 家属绑定老人档案
+     * 老人档案是已经有绑定老人用户的
+     */
 }

@@ -76,9 +76,15 @@ security:
 
 # 百度语音API配置
 baidu:
-  asr:
+  speech:
+    app-id: 122709693
     api-key: fmWJroACG3CYz7Telec6sZHx
     secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3
-  tts:
-    api-key: fmWJroACG3CYz7Telec6sZHx
-    secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3
+llm:
+  provider: qianfan
+
+qianfan:
+  api:
+    key: 你的百度API Key
+  secret:
+    key: 你的百度Secret Key

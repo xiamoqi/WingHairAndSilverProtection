@@ -13,9 +13,10 @@ services:
       - yiguard-network
     volumes:
       - ./mysql/data:/var/lib/mysql
+      - ./yiguardsilverfa.sql:/docker-entrypoint-initdb.d/yiguardsilverfa.sql
     environment:
       MYSQL_ROOT_PASSWORD: yiguard260404
-      MYSQL_DATABASE: yifa_silver_guard
+      MYSQL_DATABASE: yiguardsilverfa
     expose:
       - 3306
 

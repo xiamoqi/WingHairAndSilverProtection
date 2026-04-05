@@ -2,29 +2,32 @@
 package com.yiguardsilverfa.service;
 
 import com.yiguardsilverfa.dao.ElderInfoDAO;
+import com.yiguardsilverfa.dao.HealthQaDAO;
 import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.VoiceResponse;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.HealthQa;
-import com.yiguardsilverfa.dao.HealthQaDAO;
 import com.yiguardsilverfa.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.http.WebSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -41,7 +44,9 @@ public class VoiceService {
 
     @Autowired
     private ElderInfoDAO elderInfoDAO;
-    
+
+    @Autowired
+    private LLMService llmService;
     @Value("${baidu.asr.api-key}")
     private String baiduAsrApiKey;
     
@@ -65,47 +70,102 @@ public class VoiceService {
      */
     public VoiceResponse processVoiceChat(MultipartFile audioFile, Long userId) {
         VoiceResponse response = new VoiceResponse();
-        
+
         try {
-            // 保存临时音频文件
-            Path tempFile = saveTempAudio(audioFile);
-            
-            // 百度语音识别（ASR）- 方言转文字
-            String text = baiduSpeechToText(tempFile);
+            // 读取音频数据
+            byte[] audioData = audioFile.getBytes();
+
+            // 用于存储识别结果
+            StringBuilder recognizedText = new StringBuilder();
+            CompletableFuture<String> asrFuture = new CompletableFuture<>();
+
+            // 创建 ASR 连接
+            WebSocket asrWs = webSocketUtil.createRealtimeAsr(
+                    text -> {
+                        // 实时识别结果
+                        recognizedText.append(text);
+                        asrFuture.complete(text);
+                    },
+                    error -> {
+                        log.error("ASR错误: {}", error);
+                        asrFuture.completeExceptionally(new RuntimeException(error));
+                    }
+            );
+
+            if (asrWs == null) {
+                throw new RuntimeException("ASR连接失败");
+            }
+
+            // 发送音频数据（模拟实时发送）
+            int chunkSize = 3200;  // 100ms 一帧（16kHz * 2字节 * 0.1秒）
+            for (int offset = 0; offset < audioData.length; offset += chunkSize) {
+                int end = Math.min(offset + chunkSize, audioData.length);
+                byte[] chunk = Arrays.copyOfRange(audioData, offset, end);
+                boolean isLast = (end == audioData.length);
+                webSocketUtil.sendAudioToAsr(asrWs, chunk, isLast);
+
+                // 模拟实时发送延迟
+                Thread.sleep(100);
+            }
+
+            // 等待识别结果
+            String text = asrFuture.get(10, java.util.concurrent.TimeUnit.SECONDS);
             response.setText(text);
-            log.info("识别结果: {}", text);
-            
-            // 调用RAG服务获取回答
+            log.info("最终识别结果: {}", text);
+
+            // 关闭 ASR 连接
+            webSocketUtil.closeAsr(asrWs);
+
+            // 调用 RAG + 大模型
             String answer = callRagService(text, userId);
             response.setAnswer(answer);
-            log.info("RAG回答: {}", answer);
-            
+            log.info("AI回答: {}", answer);
+
             // 保存问答记录
             saveQaRecord(userId, text, answer);
-            
-            // 百度语音合成（TTS）- 文字转语音
-            byte[] audioData = baiduTextToSpeech(answer);
-            
-            // 返回音频（base64格式）
-            String audioBase64 = Base64.getEncoder().encodeToString(audioData);
-            response.setAudioBase64(audioBase64);
-            
-            // 清理临时文件
-            Files.deleteIfExists(tempFile);
-            
+
+            // 流式语音合成
+            ByteArrayOutputStream audioStream = new ByteArrayOutputStream();
+            CompletableFuture<Void> ttsFuture = new CompletableFuture<>();
+
+            WebSocket ttsWs = webSocketUtil.createStreamingTts(
+                    answer,
+                    audioChunk -> {
+                        // 实时收到音频数据
+                        try {
+                            audioStream.write(audioChunk);
+                        } catch (IOException e) {
+                            log.error("写入音频失败", e);
+                        }
+                    },
+                    () -> ttsFuture.complete(null),
+                    error -> ttsFuture.completeExceptionally(new RuntimeException(error))
+            );
+
+            if (ttsWs == null) {
+                throw new RuntimeException("TTS连接失败");
+            }
+
+            // 等待合成完成
+            ttsFuture.get(30, java.util.concurrent.TimeUnit.SECONDS);
+
+            // 返回音频 Base64
+            byte[] audioDataOut = audioStream.toByteArray();
+            response.setAudioBase64(Base64.getEncoder().encodeToString(audioDataOut));
+
         } catch (Exception e) {
             log.error("语音处理失败: {}", e.getMessage(), e);
             response.setText("识别失败");
             response.setAnswer("抱歉，我没有听清楚，能再说一遍吗？");
-            // 生成默认错误提示音频
+            // 降级使用 HTTP TTS
             try {
-                byte[] errorAudio = baiduTextToSpeech(response.getAnswer());
-                response.setAudioBase64(Base64.getEncoder().encodeToString(errorAudio));
+                byte[] fallbackAudio = fallbackTextToSpeech(response.getAnswer());
+                response.setAudioBase64(Base64.getEncoder().encodeToString(fallbackAudio));
             } catch (Exception ex) {
-                log.error("生成错误音频失败", ex);
+                log.error("降级TTS失败", ex);
             }
         }
-        
+
         return response;
     }
     
@@ -131,7 +191,55 @@ public class VoiceService {
             return errorAnswer;
         }
     }
-    
+
+    /**
+     * RAG + 大模型问答
+     */
+    private String callRagService(String question, Long userId) {
+        try {
+            // 获取用户信息用于个性化回答
+            User user = loginDAO.selectUserById(userId);
+            ElderInfo elderInfo = elderInfoDAO.selectElderInfoByUserId(userId);
+
+            // 构建上下文（这里先简化，后续可接入 Milvus）
+            StringBuilder context = new StringBuilder();
+            if (elderInfo != null) {
+                context.append("老人信息：");
+                if (elderInfo.getAge() != null) context.append(elderInfo.getAge()).append("岁；");
+                if (elderInfo.getMedicalHistory() != null) context.append("既往病史：").append(elderInfo.getMedicalHistory()).append("；");
+                if (elderInfo.getAllergy() != null) context.append("过敏史：").append(elderInfo.getAllergy()).append("；");
+            }
+
+            // 调用大模型生成回答
+            String answer = llmService.generateAnswer(question, context.toString());
+            return answer;
+
+        } catch (Exception e) {
+            log.error("RAG服务调用失败: {}", e.getMessage());
+            return getDefaultAnswer(question);
+        }
+    }
+
+    /**
+     * 降级 HTTP TTS
+     */
+    private byte[] fallbackTextToSpeech(String text) throws Exception {
+        String token = getBaiduAccessToken();
+        String url = "https://tsn.baidu.com/text2audio?tok=" + token +
+                "&tex=" + java.net.URLEncoder.encode(text, "UTF-8") +
+                "&per=4&spd=3&pit=8&vol=9&aue=6&cuid=yifasilverguard";
+
+        okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(url)
+                .build();
+
+        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+        try (okhttp3.Response response = client.newCall(request).execute()) {
+            return response.body().bytes();
+        }
+    }
+
+
     /**
      * 百度语音识别（支持方言）
      */
@@ -305,19 +413,33 @@ public class VoiceService {
             return getDefaultAnswer(question);
         }
     }
-    
+    /**
+     * 获取百度 AccessToken
+     */
+    private String getBaiduAccessToken() throws Exception {
+        String url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials" +
+                "&client_id=" + baiduApiKey + "&client_secret=" + baiduSecretKey;
+
+        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+        okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(url)
+                .post(okhttp3.RequestBody.create(null, new byte[0]))
+                .build();
+
+        try (okhttp3.Response response = client.newCall(request).execute()) {
+            String body = response.body().string();
+            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(body).getAsJsonObject();
+            return json.get("access_token").getAsString();
+        }
+    }
+
     /**
      * 保存问答记录
      */
     private void saveQaRecord(Long userId, String question, String answer) {
         try {
-            // 确保 question 不为 null
-            if (question == null) {
-                question = "空问题";
-            }
-            if (answer == null) {
-                answer = "暂无回答";
-            }
+            if (question == null) question = "空问题";
+            if (answer == null) answer = "暂无回答";
 
             HealthQa qa = new HealthQa();
             qa.setElderId(userId);
@@ -331,16 +453,13 @@ public class VoiceService {
             log.error("保存问答记录失败: {}", e.getMessage());
         }
     }
-    
+
     /**
      * 判断是否为紧急问题
      */
     private boolean isEmergencyQuestion(String text) {
-        if (text == null) {
-            return false;
-        }
-
-        String[] keywords = {"救命", "不舒服", "摔倒", "急救", "难受", "晕倒", "心慌", "胸闷"};
+        if (text == null) return false;
+        String[] keywords = {"救命", "不舒服", "摔倒", "急救", "难受", "晕倒", "心慌", "胸闷", "胸痛"};
         for (String kw : keywords) {
             if (text.contains(kw)) {
                 return true;
@@ -350,26 +469,19 @@ public class VoiceService {
     }
 
     /**
-     * 默认回答（当RAG服务不可用时）
+     * 默认回答
      */
     private String getDefaultAnswer(String question) {
-        if (question == null) {
-            return "您好，我是您的健康助手。请问有什么可以帮您？";
-        }
+        if (question == null) return "您好，请问有什么可以帮您？";
 
         String q = question.toLowerCase();
         if (q.contains("血压")) {
             return "建议您每天早晚各测一次血压，记录下来。如果持续偏高或偏低，请及时咨询医生。";
         } else if (q.contains("药") || q.contains("吃药")) {
             return "提醒您按时吃药，记得饭后半小时服用效果更好。";
-        } else if (q.contains("天气")) {
-            return "今天天气不错，注意保暖。";
-        } else if (q.contains("时间") || q.contains("几点")) {
-            return "现在是" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
         } else if (q.contains("你好") || q.contains("您好")) {
             return "您好！我是您的健康助手，有什么可以帮您的吗？";
         }
-
         return "您说的是：" + question + "，我记下了。";
     }
 }

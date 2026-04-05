@@ -44,7 +44,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         // 设置跨域
         setHeader(request, response);
 
-        // 修复：使用字符串设置字符编码，而不是 Charset 对象
+        // 使用字符串设置字符编码，而不是 Charset 对象
         response.setCharacterEncoding("UTF-8");
         response.setContentType(HttpConstant.MIME_JSON);
 

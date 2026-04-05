@@ -10,12 +10,14 @@
           <entry name="$PROJECT_DIR$/../../javaWeb/maven/maven_repo/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
         <module name="yi-guard-silver-fa" />
+        <module name="YiGuardSilverFa" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="17" />
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="YiGuardSilverFa" options="-parameters" />
       <module name="yi-guard-silver-fa" options="-parameters" />
     </option>
   </component>

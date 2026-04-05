@@ -15,18 +15,6 @@ public class VoiceController {
 
     @Autowired
     private VoiceService voiceService;
-
-    @PostMapping("/chat")
-    public Result<?> voiceChat(@RequestParam("audio") MultipartFile audioFile) {
-        Long userId = BaseContext.getCurrentUserId();
-        if (userId == null) {
-            return Result.unauthorized();
-        }
-        
-        // 处理语音问答
-        VoiceResponse response = voiceService.processVoiceChat(audioFile, userId);
-        return Result.success(response);
-    }
     
     /**
      * 文字问答接口

@@ -29,62 +29,6 @@ public class WebSocketUtil {
     private String cachedAccessToken;
     private long tokenExpireTime;
 
-    // 语音识别
-    public String recognizeVoice(byte[] audioData) {
-        try {
-            String token = getToken();
-            if (token == null) return "识别失败";
-
-            JsonObject body = new JsonObject();
-            body.addProperty("format", "pcm");
-            body.addProperty("rate", 16000);
-            body.addProperty("channel", 1);
-            body.addProperty("token", token);
-            body.addProperty("cuid", "java_app");
-            body.addProperty("len", audioData.length);
-            body.addProperty("speech", java.util.Base64.getEncoder().encodeToString(audioData));
-            body.addProperty("dev_pid", 15376);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://vop.baidu.com/server_api"))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
-                    .build();
-
-            HttpResponse<String> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonObject json = JsonParser.parseString(resp.body()).getAsJsonObject();
-
-            if (json.get("err_no").getAsInt() == 0) {
-                return json.getAsJsonArray("result").get(0).getAsString();
-            }
-        } catch (Exception e) {
-            log.error("识别失败", e);
-        }
-        return "识别失败";
-    }
-
-    // 语音合成
-    public byte[] synthesizeSpeech(String text) {
-        try {
-            String token = getToken();
-            if (token == null) return new byte[0];
-
-            String url = "https://tsn.baidu.com/text2audio?tok=" + token
-                    + "&tex=" + java.net.URLEncoder.encode(text, "UTF-8")
-                    + "&per=4&spd=3&pit=5&vol=9&aue=6";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
-
-            HttpResponse<byte[]> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            return resp.body();
-        } catch (Exception e) {
-            log.error("合成失败", e);
-            return new byte[0];
-        }
-    }
 
     // 获取TOKEN
     private String getToken() {

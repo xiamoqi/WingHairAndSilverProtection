@@ -33,30 +33,6 @@ public class VoiceServiceImpl implements VoiceService {
     @Autowired
     private WebSocketUtil webSocketUtil;
 
-    @Override
-    public VoiceResponse processVoiceChat(MultipartFile audioFile, Long userId) {
-        VoiceResponse response = new VoiceResponse();
-        try {
-            byte[] audioData = audioFile.getBytes();
-            String text = webSocketUtil.recognizeVoice(audioData);
-            response.setText(text);
-
-            String elderInfo = getAllElderInfoAsString(userId);
-            String answer = llmService.generateAnswer(text, elderInfo);
-            response.setAnswer(answer);
-
-            saveRecord(userId, text, answer);
-
-            byte[] resultAudio = webSocketUtil.synthesizeSpeech(answer);
-            response.setAudioBase64(Base64.getEncoder().encodeToString(resultAudio));
-
-        } catch (Exception e) {
-            log.error("语音处理失败", e);
-            response.setText("识别失败");
-            response.setAnswer("抱歉，我没听清~");
-        }
-        return response;
-    }
 
     @Override
     public String processTextChat(String question, Long userId) {

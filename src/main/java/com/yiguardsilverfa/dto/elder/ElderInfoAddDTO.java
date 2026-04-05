@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class ElderInfoAddDTO {
     /**
-     * 关联的老人账号
+     * 关联的账号
      */
     private Long userId;
     private Integer age;
@@ -31,6 +31,11 @@ public class ElderInfoAddDTO {
      */
     private String emergencyPhone;
     private String address;
+    /**
+     * 如果是家属添加档案，那就必须要选择与老人的关系
+     * 子女/配偶/其他
+     */
+    private String relation;
     /**
      * 树莓派设备编号
      */

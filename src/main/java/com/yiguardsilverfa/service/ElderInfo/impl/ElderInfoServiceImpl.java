@@ -1,11 +1,16 @@
 package com.yiguardsilverfa.service.ElderInfo.impl;
 
 import com.yiguardsilverfa.dao.ElderInfoDAO;
+import com.yiguardsilverfa.dao.FamilyBindDAO;
+import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
+import com.yiguardsilverfa.entity.FamilyBind;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
+import com.yiguardsilverfa.utils.BaseContext;
+import com.yiguardsilverfa.utils.PhoneNumberUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,41 +21,83 @@ public class ElderInfoServiceImpl implements ElderInfoService {
 
     @Autowired
     private ElderInfoDAO elderInfoDAO;
+    @Autowired
+    private FamilyBindDAO familyBindDAO;
+    @Autowired
+    private LoginDAO loginDAO;
 
+    /**
+     * 获取当前登录用户的角色（通过 userId 查表）
+     */
+    private Integer getCurrentUserRole() {
+        Long currentUserId = BaseContext.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new BusinessException("未登录或登录已过期");
+        }
+        Integer role = loginDAO.selectUserById(currentUserId).getRole();
+        if (role == null) {
+            throw new BusinessException("用户角色不存在");
+        }
+        return role;
+    }
     @Override
     @Transactional
     public void addElderInfo(ElderInfoAddDTO addDTO) {
         if(addDTO.getUserId()==null){
             throw new RuntimeException("userId不能为空");
         }
-        //绑定老人档案的时候要检验改用户角色是老人[未写]
-        /**
-         * 因为需要确定什么情况下会增加老人档案，如果是家属增加档案
-         * 那岂不是老人要先注册账号然后才能添加档案
-         * 家属是不是只能添加联系的老人档案，好像是不能直接无userid去添加老人档案的吧
-         */
-        /**
-         * 在老人档案里user-id可以存家属的userId，就是当老人没有创建账号的时候可以这样
-         * 然后如果老人创建了账号，那么就要修改user-id为老人的userId
-         * {修改方法}家属有个选项是【档案绑定老人账号】家属选中要绑定的老人档案
-         * 家属通过输入老人的username（唯一）去确认老人的账号
-         * 然后获取老人的userId，这样可以去进行修改档案绑定了
-         */
-
         if(addDTO.getAge()<=0||addDTO.getAge()>150){
             throw new RuntimeException("年龄不合法");
         }
-        //检查该用户是否已有档案（一个用户只能有一条档案）
-        ElderInfo existing=elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
-        if (existing != null) {
-            throw new BusinessException("该用户已存在档案，不能重复添加");
+        //检验紧急联系人电话是否合法
+        if (addDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(addDTO.getEmergencyPhone())) {
+            throw new BusinessException("紧急联系人电话格式不正确");
         }
-        ElderInfo elderInfo=new ElderInfo();
-        BeanUtils.copyProperties(addDTO,elderInfo);
-        int rows=elderInfoDAO.insertElderInfo(elderInfo);
-        if (rows != 1) {
-            throw new BusinessException("添加档案失败");
+        //获取当前用户角色
+        Integer currentRole = getCurrentUserRole();
+        //获取当前userid
+        Long currentUserId = BaseContext.getCurrentUserId();
+
+        ElderInfo elderInfo = new ElderInfo();
+        BeanUtils.copyProperties(addDTO, elderInfo);
+        elderInfo.setStatus(1);
+        if(currentRole==1){
+            //如果是老人，则检验是否已有档案，若有，则不能添加
+            //检查该老人是否已有自己的档案
+            ElderInfo existing = elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
+            if (existing != null && existing.getStatus() == 1) {
+                throw new BusinessException("您只能添加自己的档案,您档案档案已存在，不能重复添加");
+            }
+            int rows = elderInfoDAO.insertElderInfo(elderInfo);
+            if (rows != 1) {
+                throw new BusinessException("添加档案失败");
+            }
+        } else if (currentRole==2) {
+            //如果是家属，那就可以添加档案，同时在family_bind表中添加一条连接数据
+            if(addDTO.getRelation()==null|| addDTO.getRelation().isEmpty()){
+                throw new BusinessException("家属添加档案时必须填写与老人的关系");
+            }
+            int rows = elderInfoDAO.insertElderInfo(elderInfo);
+            if (rows != 1) {
+                throw new BusinessException("添加档案失败");
+            }
+            // 同时插入家属绑定关系
+            FamilyBind bind = new FamilyBind();
+            bind.setFamilyUserId(currentUserId);
+            bind.setElderId(addDTO.getUserId());
+            bind.setRelation(addDTO.getRelation());
+            bind.setStatus(1); // 绑定中
+            familyBindDAO.insert(bind);
+        }else {
+            throw new BusinessException("只有老人或家属可以添加档案");
         }
+
+        /**
+         * 如果是老人添加档案，就直接存uderid
+         * 如果是家属添加老人档案，而且老人没注册账号，那么userid存家属id
+         * 那就说明elderinfo表中的userid不用唯一，一个【家属】用户可以有多个，但是老人只能有一个
+         */
+
     }
 
     @Override
@@ -63,7 +110,9 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             throw new BusinessException("档案不存在");
         }
         //检验紧急联系人电话是否合法
-
+        if (updateDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(updateDTO.getEmergencyPhone())) {
+            throw new BusinessException("紧急联系人电话格式不正确");
+        }
         ElderInfo update = new ElderInfo();
         BeanUtils.copyProperties(updateDTO,update);
         int result = elderInfoDAO.updateElderInfoById(update);
@@ -72,6 +121,10 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         }
     }
 
+    /**
+     * 逻辑删除档案
+     * @param id：档案ID
+     */
     @Override
     public void deleteElderInfo(Long id) {
 /**
@@ -81,6 +134,40 @@ public class ElderInfoServiceImpl implements ElderInfoService {
  * 老人也可以删除档案
  * 如果是老人注销用户，那么通过查找userID进行修改elder—info中stayus=0
  */
+        //获取档案信息
+        ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(id);
+        if (elderInfo == null) {
+            throw new BusinessException("档案不存在");
+        }
+        //获取当前用户角色和ID
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer currentRole = loginDAO.selectUserById(currentUserId).getRole();
+        if (currentRole == null) {
+            throw new BusinessException("无法获取用户角色");
+        }
+        if (currentRole == 1) {
+            /**
+             * 其实在老人端里面，老人只能看到自己的档案，看不到其他人的档案
+             * 但是还是做个判断以防万一吧
+             */
+            //判断当前用户ID是否与被删档案ID一致
+            if (!currentUserId.equals(elderInfo.getUserId())) {
+                throw new BusinessException("老人只能删除自己的档案");
+            }
+            int rows = elderInfoDAO.softDeleteById(id);
+            if (rows != 1) {
+                throw new BusinessException("注销档案失败");
+            }
+        } else if (currentRole==2) {
+            /**
+             * 这里也是做个防御性判断
+             */
+            // 检查是否有绑定关系
+            int rows = familyBindDAO.deleteByFamilyAndElder(currentUserId, elderInfo.getUserId());
+            if (rows == 0) {
+                throw new BusinessException("您与该老人没有绑定关系，无法解除");
+            }
+        }
     }
 
     @Override
@@ -121,7 +208,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         }
         int result = elderInfoDAO.restoreById(id);
         if (result != 1) {
-            throw new BusinessException("更新档案失败");
+            throw new BusinessException("修复档案失败");
         }
     }
 }

@@ -8,7 +8,11 @@ import com.yiguardsilverfa.dto.VoiceResponse;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.HealthQa;
 import com.yiguardsilverfa.entity.User;
+import com.yiguardsilverfa.utils.WebSocketUtil;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.http.WebSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +31,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -35,7 +39,7 @@ public class VoiceService {
 
     @Autowired
     private RestTemplate restTemplate;
-    
+
     @Autowired
     private HealthQaDAO healthQaDAO;
 
@@ -47,24 +51,35 @@ public class VoiceService {
 
     @Autowired
     private LLMService llmService;
+
+    @Autowired
+    private WebSocketUtil webSocketUtil;
+
     @Value("${baidu.asr.api-key}")
     private String baiduAsrApiKey;
-    
+
     @Value("${baidu.asr.secret-key}")
     private String baiduAsrSecretKey;
-    
+
     @Value("${baidu.tts.api-key}")
     private String baiduTtsApiKey;
-    
+
     @Value("${baidu.tts.secret-key}")
     private String baiduTtsSecretKey;
-    
+
+    @Value("${baidu.speech.api-key:}")
+    private String baiduApiKey;
+
+    @Value("${baidu.speech.secret-key:}")
+    private String baiduSecretKey;
+
     @Value("${rag.service.url:http://localhost:5000/chat}")
     private String ragServiceUrl;
-    
+
+
     private String baiduAccessToken;
     private long tokenExpireTime;
-    
+
     /**
      * 处理语音问答
      */
@@ -80,7 +95,7 @@ public class VoiceService {
             CompletableFuture<String> asrFuture = new CompletableFuture<>();
 
             // 创建 ASR 连接
-            WebSocket asrWs = webSocketUtil.createRealtimeAsr(
+            okhttp3.WebSocket asrWs = webSocketUtil.createRealtimeAsr(
                     text -> {
                         // 实时识别结果
                         recognizedText.append(text);
@@ -96,7 +111,7 @@ public class VoiceService {
                 throw new RuntimeException("ASR连接失败");
             }
 
-            // 发送音频数据（模拟实时发送）
+            // 发送音频数据
             int chunkSize = 3200;  // 100ms 一帧（16kHz * 2字节 * 0.1秒）
             for (int offset = 0; offset < audioData.length; offset += chunkSize) {
                 int end = Math.min(offset + chunkSize, audioData.length);
@@ -104,7 +119,7 @@ public class VoiceService {
                 boolean isLast = (end == audioData.length);
                 webSocketUtil.sendAudioToAsr(asrWs, chunk, isLast);
 
-                // 模拟实时发送延迟
+                // 实时发送延迟
                 Thread.sleep(100);
             }
 
@@ -128,7 +143,7 @@ public class VoiceService {
             ByteArrayOutputStream audioStream = new ByteArrayOutputStream();
             CompletableFuture<Void> ttsFuture = new CompletableFuture<>();
 
-            WebSocket ttsWs = webSocketUtil.createStreamingTts(
+            okhttp3.WebSocket ttsWs = webSocketUtil.createStreamingTts(
                     answer,
                     audioChunk -> {
                         // 实时收到音频数据
@@ -168,7 +183,7 @@ public class VoiceService {
 
         return response;
     }
-    
+
     /**
      * 文字问答
      */
@@ -189,34 +204,6 @@ public class VoiceService {
             String errorAnswer = "抱歉，系统暂时无法回答您的问题，请稍后再试。";
             saveQaRecord(userId, question != null ? question : "未知问题", errorAnswer);
             return errorAnswer;
-        }
-    }
-
-    /**
-     * RAG + 大模型问答
-     */
-    private String callRagService(String question, Long userId) {
-        try {
-            // 获取用户信息用于个性化回答
-            User user = loginDAO.selectUserById(userId);
-            ElderInfo elderInfo = elderInfoDAO.selectElderInfoByUserId(userId);
-
-            // 构建上下文（这里先简化，后续可接入 Milvus）
-            StringBuilder context = new StringBuilder();
-            if (elderInfo != null) {
-                context.append("老人信息：");
-                if (elderInfo.getAge() != null) context.append(elderInfo.getAge()).append("岁；");
-                if (elderInfo.getMedicalHistory() != null) context.append("既往病史：").append(elderInfo.getMedicalHistory()).append("；");
-                if (elderInfo.getAllergy() != null) context.append("过敏史：").append(elderInfo.getAllergy()).append("；");
-            }
-
-            // 调用大模型生成回答
-            String answer = llmService.generateAnswer(question, context.toString());
-            return answer;
-
-        } catch (Exception e) {
-            log.error("RAG服务调用失败: {}", e.getMessage());
-            return getDefaultAnswer(question);
         }
     }
 
@@ -245,14 +232,14 @@ public class VoiceService {
      */
     private String baiduSpeechToText(Path audioFile) throws Exception {
         String accessToken = getBaiduAccessToken();
-        
+
         // 读取音频文件
         byte[] audioData = Files.readAllBytes(audioFile);
         String audioBase64 = Base64.getEncoder().encodeToString(audioData);
-        
+
         // 构建请求
         String url = "https://vop.baidu.com/server_api";
-        
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("format", "pcm");  // 音频格式
         requestBody.put("rate", 16000);     // 采样率
@@ -262,18 +249,18 @@ public class VoiceService {
         requestBody.put("len", audioData.length);
         requestBody.put("speech", audioBase64);
         requestBody.put("dev_pid", 15376);  // 多方言自动识别（粤语/四川话/东北话等）
-        
+
         // 发送请求
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setDoOutput(true);
-        
+
         try (OutputStream os = conn.getOutputStream()) {
             os.write(new com.google.gson.Gson().toJson(requestBody).getBytes());
             os.flush();
         }
-        
+
         // 读取响应
         StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
@@ -282,7 +269,7 @@ public class VoiceService {
                 response.append(line);
             }
         }
-        
+
         // 解析结果
         com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(response.toString()).getAsJsonObject();
         if (json.get("err_no").getAsInt() == 0) {
@@ -291,13 +278,13 @@ public class VoiceService {
             throw new RuntimeException("ASR识别失败: " + json.get("err_msg").getAsString());
         }
     }
-    
+
     /**
      * 百度语音合成
      */
     private byte[] baiduTextToSpeech(String text) throws Exception {
         String accessToken = getBaiduAccessToken();
-        
+
         // 构建请求
         String url = "https://tsn.baidu.com/text2audio?tok=" + accessToken +
                 "&tex=" + java.net.URLEncoder.encode(text, "UTF-8") +
@@ -307,10 +294,10 @@ public class VoiceService {
                 "&vol=9" +      // 音量：9-较大
                 "&aue=6" +      // 返回格式：6-pcm
                 "&cuid=yifasilverguard";
-        
+
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setRequestMethod("POST");
-        
+
         // 读取音频数据
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (InputStream is = conn.getInputStream()) {
@@ -320,18 +307,18 @@ public class VoiceService {
                 baos.write(buffer, 0, len);
             }
         }
-        
+
         byte[] audioData = baos.toByteArray();
-        
+
         // 检查是否为错误响应
         if (audioData.length > 0 && audioData[0] == '{') {
             String error = new String(audioData);
             throw new RuntimeException("TTS合成失败: " + error);
         }
-        
+
         return audioData;
     }
-    
+
     /**
      * 获取百度AccessToken
      */
@@ -340,14 +327,14 @@ public class VoiceService {
         if (baiduAccessToken != null && System.currentTimeMillis() < tokenExpireTime) {
             return baiduAccessToken;
         }
-        
+
         String url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials" +
                 "&client_id=" + baiduAsrApiKey +
                 "&client_secret=" + baiduAsrSecretKey;
-        
+
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setRequestMethod("POST");
-        
+
         StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             String line;
@@ -355,15 +342,15 @@ public class VoiceService {
                 response.append(line);
             }
         }
-        
+
         com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(response.toString()).getAsJsonObject();
         baiduAccessToken = json.get("access_token").getAsString();
         int expiresIn = json.get("expires_in").getAsInt();
         tokenExpireTime = System.currentTimeMillis() + (expiresIn - 60) * 1000L;
-        
+
         return baiduAccessToken;
     }
-    
+
     /**
      * 保存临时音频文件
      */
@@ -373,7 +360,7 @@ public class VoiceService {
         Files.write(tempFile, audioFile.getBytes());
         return tempFile;
     }
-    
+
     /**
      * 调用RAG服务
      */
@@ -387,49 +374,20 @@ public class VoiceService {
             User user = loginDAO.selectUserById(userId);
             ElderInfo elderInfo = elderInfoDAO.selectElderInfoByUserId(userId);
 
-            Map<String, Object> request = new HashMap<>();
-            request.put("question", question);
-            request.put("user_id", userId);
+            StringBuilder context = new StringBuilder();
             if (elderInfo != null) {
-                request.put("elder_info", elderInfo);
+                context.append("老人信息：");
+                if (elderInfo.getAge() != null) context.append(elderInfo.getAge()).append("岁；");
+                if (elderInfo.getMedicalHistory() != null) context.append("既往病史：").append(elderInfo.getMedicalHistory()).append("；");
+                if (elderInfo.getAllergy() != null) context.append("过敏史：").append(elderInfo.getAllergy()).append("；");
             }
 
-            log.info("调用RAG服务，URL: {}, 问题: {}", ragServiceUrl, question);
-
-            // 发送HTTP请求到RAG服务
-            Map<String, String> response = restTemplate.postForObject(
-                    ragServiceUrl,
-                    request,
-                    Map.class
-            );
-
-            if (response != null && response.containsKey("answer") && response.get("answer") != null) {
-                return response.get("answer");
-            }
-            return getDefaultAnswer(question);
+            String answer = llmService.generateAnswer(question, context.toString());
+            return answer;
 
         } catch (Exception e) {
             log.error("RAG服务调用失败: {}", e.getMessage());
             return getDefaultAnswer(question);
-        }
-    }
-    /**
-     * 获取百度 AccessToken
-     */
-    private String getBaiduAccessToken() throws Exception {
-        String url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials" +
-                "&client_id=" + baiduApiKey + "&client_secret=" + baiduSecretKey;
-
-        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
-        okhttp3.Request request = new okhttp3.Request.Builder()
-                .url(url)
-                .post(okhttp3.RequestBody.create(null, new byte[0]))
-                .build();
-
-        try (okhttp3.Response response = client.newCall(request).execute()) {
-            String body = response.body().string();
-            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(body).getAsJsonObject();
-            return json.get("access_token").getAsString();
         }
     }
 

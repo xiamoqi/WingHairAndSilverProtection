@@ -1,6 +1,7 @@
 package com.yiguardsilverfa.utils;
 
-import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import okio.ByteString;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,8 +14,6 @@ import java.util.function.Consumer;
 @Component
 @Slf4j
 public class WebSocketUtil {
-
-    private final Gson gson = new Gson();
 
     @Value("${baidu.speech.app-id:}")
     private String appId;
@@ -47,18 +46,16 @@ public class WebSocketUtil {
                     .url(url)
                     .build();
             WebSocketListener listener = new WebSocketListener() {
-                private boolean handshakeComplete = false;
 
                 @Override
-                public void onOpen(WebSocket webSocket, Response respinse) {
+                public void onOpen(WebSocket webSocket, Response response) {
                     log.info("ASR WebSocket连接成功");
-                    handshakeComplete = true;
                 }
 
                 @Override
                 public void onMessage(WebSocket webSocket, String text) {
                     try {
-                        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(text).getAsJsonObject();
+                        JsonObject json = JsonParser.parseString(text).getAsJsonObject();
                         if (json.has("err_no") && json.get("err_no").getAsInt() != 0) {
                             String errMsg = json.has("err_msg") ? json.get("err_msg").getAsString() : "未知错误";
                             log.error("ASR 错误: err_no={}, err_msg={}", json.get("err_no").getAsInt(), errMsg);
@@ -66,7 +63,7 @@ public class WebSocketUtil {
                             return;
                         }
                         if (json.has("result")) {
-                            com.google.gson.JsonObject result = json.getAsJsonObject("result");
+                            JsonObject result = json.getAsJsonObject("result");
                             if (result.has("final_text")) {
                                 text = result.get("final_text").getAsString();
                                 if (text != null && !text.isEmpty()) {
@@ -99,7 +96,7 @@ public class WebSocketUtil {
     public void sendAudioToAsr(WebSocket webSocket, byte[] audioData, boolean isLast) {
         if (webSocket == null) return;
         // 构建二进制音频帧
-        ByteString frame - buildAudioFrame(audioData, isLast);
+        ByteString frame = buildAudioFrame(audioData, isLast);
         webSocket.send(frame);
 
         if (isLast) {
@@ -145,7 +142,7 @@ public class WebSocketUtil {
                 public void onMessage(WebSocket webSocket, String text) {
                     // 收到文本消息
                     try {
-                        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(text).getAsJsonObject();
+                        JsonObject json = JsonParser.parseString(text).getAsJsonObject();
                         if (json.has("err_no") && json.get("err_no").getAsInt() != 0) {
                             String errMsg = json.has("err_msg") ? json.get("err_msg").getAsString() : "未知错误";
                             onError.accept(errMsg);
@@ -176,9 +173,6 @@ public class WebSocketUtil {
 
     // 构建ASR的URL
     private String buildTtsWebSocketUrl() throws Exception {
-        String apiKey = ;
-        String secretKey = ;
-
         String token = getBaiduAccessToken(apiKey, secretKey);
         String cuid = "yiguardsilverfa";
 
@@ -194,7 +188,7 @@ public class WebSocketUtil {
     private void sendTtsRequest(WebSocket webSocket, String text) {
         try {
             // 构建请求消息
-            com.google.gson.JsonObject request = new com.google.gson.JsonObject();
+            JsonObject request = new JsonObject();
             request.addProperty("type", "TEXT");
             request.addProperty("data", text);
 
@@ -220,18 +214,32 @@ public class WebSocketUtil {
 
     // 获取百度语音识别的AccessToken
     private String getBaiduAccessToken(String apiKey, String secretKey) throws Exception {
+        if (cachedAccessToken != null && System.currentTimeMillis() < tokenExpireTime) {
+            return cachedAccessToken;
+        }
+
         String url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials" +
                 "&client_id=" + apiKey + "&client_secret=" + secretKey;
 
-        okhttp3.Request request = new okhttp3.Request.Builder()
+        Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(null, new byte[0]))
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new RuntimeException("获取百度AccessToken失败: " + response.code());
+            }
             String body = response.body().string();
-            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(body).getAsJsonObject();
-            return json.get("access_token").getAsString();
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            String token = json.get("access_token").getAsString();
+            long expiresIn = json.get("expires_in").getAsLong();
+
+            this.cachedAccessToken = token;
+            // 提前60秒过期，确保安全
+            this.tokenExpireTime = System.currentTimeMillis() + (expiresIn - 60) * 1000;
+
+            return token;
         }
     }
 }

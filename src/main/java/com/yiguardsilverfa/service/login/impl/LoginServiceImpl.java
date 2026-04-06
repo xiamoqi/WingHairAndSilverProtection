@@ -185,6 +185,16 @@ public class LoginServiceImpl implements LoginService {
                 return false;
         }
         String cachedCode = stringRedisTemplate.opsForValue().get(key);
+        if (cachedCode != null) {
+            cachedCode = cachedCode.replaceAll("[^0-9]", ""); // 只留数字
+            if (cachedCode.length() > 6) {
+                cachedCode = cachedCode.substring(cachedCode.length() - 6); // 取最后6位
+            }
+        }
+        if (code != null) {
+            code = code.replaceAll("[^0-9]", "");
+        }
+        log.info("【验证码校验】Redis存储的验证码：{}，用户输入的验证码：{}", cachedCode, code);
         boolean isValid = code != null && code.equals(cachedCode);
         if (isValid) {
             // 验证成功后删除验证码，防止重复使用

@@ -157,7 +157,6 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      * 根据老人档案ID查询药品列表
      */
     @Override
-    @Transactional
     public List<MedicineInfo> getMedicineInfoByElderId(Long elderId) {
         if (elderId == null) {
             return new ArrayList<>();
@@ -178,7 +177,7 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
         }
         // 查询老人的档案
         List<ElderInfo> elder = elderInfoDAO.selectElderInfoByUserId(currentUserId);
-        if (elder.get(0).getStatus() != 1 || elder.isEmpty()) {
+        if (elder.isEmpty() || elder.get(0).getStatus() != 1) {
             throw new BusinessException("请先创建您的档案");
         }
         // 根据档案ID查询药品
@@ -189,7 +188,6 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      * 条件查询药品（支持模糊查询、类型筛选）
      */
     @Override
-    @Transactional
     public List<MedicineInfo> getMedicineInfoByCondition(MedicineSelectDTO medicineSelectDTO) {
         List<Long> accessibleElderIds = getAccessibleElderIds();
         if (accessibleElderIds.isEmpty()) {

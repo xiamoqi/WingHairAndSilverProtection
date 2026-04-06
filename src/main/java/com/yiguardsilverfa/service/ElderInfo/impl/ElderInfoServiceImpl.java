@@ -68,11 +68,14 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         BeanUtils.copyProperties(addDTO, elderInfo);
         elderInfo.setStatus(1);
         if(currentRole==1){
+            if (!currentUserId.equals(addDTO.getUserId())) {
+                throw new BusinessException("老人只能添加自己的档案");
+            }
             //如果是老人，则检验是否已有档案，若有，则不能添加
             //检查该老人是否已有自己的档案
             List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
-            if (existing != null && existing.isEmpty()&&existing.get(0).getStatus()==1) {
-                throw new BusinessException("您只能添加自己的档案,您档案档案已存在，不能重复添加");
+            if (existing != null && !existing.isEmpty() && existing.get(0).getStatus() == 1) {
+                throw new BusinessException("您已存在档案，不能重复添加");
             }
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {

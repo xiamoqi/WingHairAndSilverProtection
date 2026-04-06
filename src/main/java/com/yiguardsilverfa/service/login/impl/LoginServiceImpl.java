@@ -84,7 +84,7 @@ public class LoginServiceImpl implements LoginService {
     public LoginVO login(LoginDTO loginDTO) {
         loginDTO.setPassword(PasswordUtil.encodePassword(loginDTO.getPassword()));
 
-        User user = loginDAO.selectUserByUsername(loginDTO.getUsername());
+        User user = loginDAO.selectUserByPhone(loginDTO.getPhone());
         if (user == null || !user.getPassword().equals(loginDTO.getPassword()) || user.getStatus() == 0) {
             return null;
         }

@@ -62,11 +62,11 @@ public class LoginController {
     }
 
     /**
-     * 用户登录（使用用户名+密码）
+     * 用户登录（使用电话+密码）
      */
     @PostMapping("/users/login")
     public Result<?> login(@RequestBody LoginDTO loginDTO) {
-        if (ObjectUtil.hasEmpty(loginDTO.getUsername(), loginDTO.getPassword())) {
+        if (ObjectUtil.hasEmpty(loginDTO.getPhone(), loginDTO.getPassword())) {
             return Result.failure(LoginConstant.LOGIN_ERROR);
         }
 

@@ -25,7 +25,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -163,7 +162,7 @@ public class LoginServiceImpl implements LoginService {
     private String createTokenAndSave(User user) {
         String token = jwtUtil.createJwt(user.getId(), user.getUsername(), user.getRole().toString());
         stringRedisTemplate.opsForValue().set(LoginConstant.TOKEN_CACHE_PREFIX + token, String.valueOf(user.getId()),
-                securityProperties.getTokenValiditySeconds(), TimeUnit.SECONDS);
+                securityProperties.getTokenValiditySeconds());
         return token;
     }
 
@@ -215,7 +214,7 @@ public class LoginServiceImpl implements LoginService {
                 return null;
         }
 
-        stringRedisTemplate.opsForValue().set(key, code, 5, TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(key, code, 300L);
         emailService.sendCode(email, code);
         return code;
     }

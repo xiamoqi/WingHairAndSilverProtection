@@ -44,7 +44,7 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         // 设置跨域
         setHeader(request, response);
 
-        // 修复：使用字符串设置字符编码，而不是 Charset 对象
+        // 使用字符串设置字符编码，而不是 Charset 对象
         response.setCharacterEncoding("UTF-8");
         response.setContentType(HttpConstant.MIME_JSON);
 
@@ -79,7 +79,17 @@ public class AuthorizationInterceptor implements HandlerInterceptor {
         String jwt = token.substring(properties.getTokenStartWith().length());
         // token不为空，开始解析
         String s = stringRedisTemplate.opsForValue().get(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
-        Long userId = s != null ? Long.valueOf(s) : null;
+        Long userId = null;
+
+        if (s != null && !s.trim().isEmpty()) {
+            try {
+                userId = Long.valueOf(s.trim());
+            } catch (NumberFormatException e) {
+                log.error("Redis中存储的token值不是有效数字，已清除: {}", s);
+                // 清除无效的缓存
+                stringRedisTemplate.delete(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
+            }
+        }
         if (userId == null) {
             try {
                 writer = response.getWriter();

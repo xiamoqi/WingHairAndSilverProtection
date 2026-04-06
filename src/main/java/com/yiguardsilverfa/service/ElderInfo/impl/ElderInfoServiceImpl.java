@@ -142,7 +142,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
  * 如果是家属删除档案应该是断开family_bind的联系，但是elder—info仍然存在
  * 家属删除：获取当前用户的userID，在family_bind查找档案关系，
  * 老人也可以删除档案
- * 如果是老人注销用户，那么通过查找userID进行修改elder—info中stayus=0
+ * 如果是老人注销用户，那么通过查找userID进行修改elder—info中status=0
  */
         //获取档案信息
         ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(id);

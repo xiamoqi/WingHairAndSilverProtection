@@ -73,12 +73,3 @@ security:
       - /error
     admin-paths:
       - /api/v1/admin/**
-
-# 百度语音API配置
-baidu:
-  asr:
-    api-key: fmWJroACG3CYz7Telec6sZHx
-    secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3
-  tts:
-    api-key: fmWJroACG3CYz7Telec6sZHx
-    secret-key: GRsEHLfj7XzF8b6hCkLEkpjGgotmCSa3

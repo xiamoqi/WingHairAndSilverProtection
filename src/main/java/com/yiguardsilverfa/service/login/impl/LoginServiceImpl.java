@@ -204,8 +204,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private String sendAndSaveCode(CodeDTO codeDTO) {
-        int num = RandomUtil.randomInt(LoginConstant.VERIFY_CODE_RANDOM_START, LoginConstant.VERIFY_CODE_RANDOM_END);
-        String code = String.format("%0" + LoginConstant.VERIFY_CODE_LENGTH + "d", num);
+        String code = RandomUtil.randomNumbers(LoginConstant.VERIFY_CODE_LENGTH);
         int type = codeDTO.getType();
         String email = codeDTO.getEmail();
 

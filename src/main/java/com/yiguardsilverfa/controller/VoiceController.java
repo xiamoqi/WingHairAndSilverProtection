@@ -27,6 +27,6 @@ public class VoiceController {
         }
         
         String answer = voiceService.processTextChat(request.getQuestion(), userId);
-        return Result.success(answer);
+        return Result.success((Object) answer);
     }
 }

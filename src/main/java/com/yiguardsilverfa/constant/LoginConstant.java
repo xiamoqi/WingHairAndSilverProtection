@@ -20,7 +20,7 @@ public class LoginConstant {
     public static final String REGISTER_CODE_CACHE_PREFIX = "login:code:register:";
     public static final String RESET_PASSWORD_CODE_CACHE_PREFIX = "login:code:findPassword:";
     public static final String CHANGE_PASSWORD_CODE_CACHE_PREFIX = "login:code:changePassword:";
-    public static final String BIND_PHONE_CODE_CACHE_PREFIX = "login:code:bindPhone:";  // 新增
+    public static final String BIND_PHONE_CODE_CACHE_PREFIX = "login:code:bindPhone:";
     public static final String TOKEN_CACHE_PREFIX = "login:token:";
 
     // 提示信息

@@ -9,7 +9,6 @@ public class ElderInfoAddDTO {
     /**
      * 关联的账号
      */
-    private Long userId;
     private Integer age;
     private Integer gender;
     private Integer height;

@@ -49,9 +49,6 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     @Override
     @Transactional
     public void addElderInfo(ElderInfoAddDTO addDTO) {
-        if(addDTO.getUserId()==null){
-            throw new RuntimeException("userId不能为空");
-        }
         if(addDTO.getAge()<=0||addDTO.getAge()>150){
             throw new RuntimeException("年龄不合法");
         }
@@ -68,12 +65,10 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         BeanUtils.copyProperties(addDTO, elderInfo);
         elderInfo.setStatus(1);
         if(currentRole==1){
-            if (!currentUserId.equals(addDTO.getUserId())) {
-                throw new BusinessException("老人只能添加自己的档案");
-            }
+            elderInfo.setUserId(currentUserId);
             //如果是老人，则检验是否已有档案，若有，则不能添加
             //检查该老人是否已有自己的档案
-            List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(addDTO.getUserId());
+            List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(currentUserId);
             if (existing != null && !existing.isEmpty() && existing.get(0).getStatus() == 1) {
                 throw new BusinessException("您已存在档案，不能重复添加");
             }
@@ -86,6 +81,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             if(addDTO.getRelation()==null|| addDTO.getRelation().isEmpty()){
                 throw new BusinessException("家属添加档案时必须填写与老人的关系");
             }
+            elderInfo.setUserId(currentUserId);
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
                 throw new BusinessException("添加档案失败");

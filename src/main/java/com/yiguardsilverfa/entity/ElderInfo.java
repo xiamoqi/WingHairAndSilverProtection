@@ -15,6 +15,10 @@ public class ElderInfo {
      **/
     Long userId;
     /**
+     * 老人姓名
+     **/
+    String name;
+    /**
      * 年龄
      **/
     Integer age;

@@ -5,6 +5,7 @@
     <resultMap id="ElderInfoMap" type="com.yiguardsilverfa.entity.ElderInfo">
         <id column="id" property="id"/>
         <result column="user_id" property="userId"/>
+        <result column="elder_name" property="name"/>
         <result column="age" property="age"/>
         <result column="gender" property="gender"/>
         <result column="height" property="height"/>
@@ -21,9 +22,9 @@
 
     <insert id="insertElderInfo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO elder_info (user_id, age, gender, height, weight, medical_history, allergy,
-                                emergency_contact, emergency_phone, address, device_id, create_time, update_time)
+                                emergency_contact, emergency_phone, address, device_id, create_time, update_time,elder_name)
         VALUES (#{userId}, #{age}, #{gender}, #{height}, #{weight}, #{medicalHistory}, #{allergy},
-                #{emergencyContact}, #{emergencyPhone}, #{address}, #{deviceId}, NOW(), NOW())
+                #{emergencyContact}, #{emergencyPhone}, #{address}, #{deviceId}, NOW(), NOW(),#{name})
     </insert>
 
     <select id="selectElderInfoByUserId" resultMap="ElderInfoMap">
@@ -34,6 +35,7 @@
         UPDATE elder_info
         <set>
             <if test="userId != null">user_id = #{userId},</if>
+            <if test="name != null">elder_name = #{name},</if>
             <if test="age != null">age = #{age},</if>
             <if test="gender != null">gender = #{gender},</if>
             <if test="height != null">height = #{height},</if>
@@ -52,6 +54,11 @@
     <!--根据ID查询-->
     <select id="selectElderInfoById" resultMap="ElderInfoMap">
         select * from elder_info where id = #{id} AND status = 1
+    </select>
+
+    <!--根据老人名字查询-->
+    <select id="selectElderInfoByName" resultMap="ElderInfoMap">
+        select * from elder_info where elder_name = #{name} AND status = 1
     </select>
 
     <!--根据id逻辑删除-->

@@ -37,7 +37,10 @@ public interface ElderInfoDAO {
      * 根据ID查询
      */
     ElderInfo selectElderInfoById(@Param("id") Long id);
-
+    /**
+     * 根据名字查询
+     */
+    ElderInfo selectElderInfoByName(@Param("name") String name);
     /**
      * 管理员恢复删除
      */

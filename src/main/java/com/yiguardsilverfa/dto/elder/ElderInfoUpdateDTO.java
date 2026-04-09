@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class ElderInfoUpdateDTO {
     private Long id;                 // 档案ID
+    private String name;
     private Integer age;
     private Integer gender;
     private Integer height;

@@ -81,7 +81,8 @@ public class ElderInfoController {
     @PostMapping("/bind-account")
     public Result<?> bindElderAccount(@RequestBody BindElderAccountDTO bindDTO) {
         elderInfoService.bindElderAccount(bindDTO);
-        return Result.success("绑定成功");
+        ElderInfo info = elderInfoService.getElderInfoById(bindDTO.getElderInfoId());
+        return Result.success(info);
     }
 
     /**

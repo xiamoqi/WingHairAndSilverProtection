@@ -50,7 +50,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     @Transactional
     public void addElderInfo(ElderInfoAddDTO addDTO) {
         if(addDTO.getAge()<=0||addDTO.getAge()>150){
-            throw new RuntimeException("年龄不合法");
+            throw new BusinessException("年龄不合法");
         }
         //检验紧急联系人电话是否合法
         if (addDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(addDTO.getEmergencyPhone())) {

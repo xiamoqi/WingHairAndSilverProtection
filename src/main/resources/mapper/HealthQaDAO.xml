@@ -10,6 +10,16 @@
         <result column="is_emergency" property="isEmergency"/>
         <result column="ask_time" property="askTime"/>
     </resultMap>
+    <!--该返回数据中包含老人信息-->
+    <resultMap id="HealthQaWithNameMap" type="com.yiguardsilverfa.dto.healthQa.SelectHealthQaDTO">
+        <id column="id" property="id"/>
+        <result column="elder_id" property="elderId"/>
+        <result column="elder_name" property="elderName"/>
+        <result column="question" property="question"/>
+        <result column="answer" property="answer"/>
+        <result column="is_emergency" property="isEmergency"/>
+        <result column="ask_time" property="askTime"/>
+    </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO health_qa (elder_id, question, answer, is_emergency, ask_time)
@@ -18,6 +28,25 @@
 
     <select id="selectByElderId" resultMap="HealthQaMap">
         SELECT * FROM health_qa WHERE elder_id = #{elderId} ORDER BY ask_time DESC
+    </select>
+<!--查询多个老人-->
+    <select id="selectAllByElderId" resultMap="HealthQaWithNameMap">
+        SELECT
+        hq.id,
+        hq.elder_id,
+        hq.question,
+        hq.answer,
+        hq.is_emergency,
+        hq.ask_time,
+        COALESCE(u.nickname, u.username, '未设置姓名') AS elder_name
+        FROM health_qa hq
+        LEFT JOIN elder_info ei ON hq.elder_id = ei.id
+        LEFT JOIN sys_user u ON ei.user_id = u.id
+        WHERE hq.elder_id IN
+        <foreach collection="elderIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY hq.id DESC
     </select>
 
     <select id="selectEmergencyQuestions" resultMap="HealthQaMap">

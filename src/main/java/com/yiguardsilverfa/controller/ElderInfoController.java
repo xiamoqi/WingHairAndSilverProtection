@@ -8,7 +8,9 @@ import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.dto.user.SearchUserNameDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.Result;
+import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
+import com.yiguardsilverfa.utils.PhoneNumberUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,14 +23,25 @@ public class ElderInfoController {
     private ElderInfoService elderInfoService;
 
     /**档案添加
-     * 前端检验紧急联系人电话是否合法
+     * 检验紧急联系人电话是否合法
+     * 添加成功后前端通过调用userid的查询语句去刷新页面
      * @param addDTO
      * @return
      */
     @PostMapping("/add")
     public Result<?> addElderInfo(@RequestBody ElderInfoAddDTO addDTO) {
-        elderInfoService.addElderInfo(addDTO);
-        return Result.success("添加档案成功");
+        if(addDTO.getAge()<=0||addDTO.getAge()>150){
+            return Result.failure("年龄不合法");
+        }
+        //检验紧急联系人电话是否合法
+        if (addDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(addDTO.getEmergencyPhone())) {
+            return Result.failure("紧急联系人电话格式不正确");
+        }
+        //地址不能为空
+        if (addDTO.getAddress() == null || addDTO.getAddress().trim().isEmpty()) {
+            return Result.failure("地址不能为空");
+        }
+        return elderInfoService.addElderInfo(addDTO);
     }
 
     /**档案修改
@@ -38,8 +51,16 @@ public class ElderInfoController {
      */
     @PostMapping("/update")
     public Result<?> updateElderInfo(@RequestBody ElderInfoUpdateDTO updateDTO) {
-        elderInfoService.updateElderInfo(updateDTO);
-        return Result.success("修改档案成功");
+        if(updateDTO.getId() == null){
+            return Result.failure("档案ID不能为空");
+        }
+        if(updateDTO.getAge()<=0||updateDTO.getAge()>150){
+            return Result.failure("年龄不合法");
+        }
+        if (updateDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(updateDTO.getEmergencyPhone())) {
+            return Result.failure("紧急联系人电话格式不正确");
+        }
+        return elderInfoService.updateElderInfo(updateDTO);
     }
 
     /**
@@ -50,16 +71,22 @@ public class ElderInfoController {
 
     @DeleteMapping("/delete/{id}")
     public Result<?> deleteElderInfo(@PathVariable Long id) {
-        elderInfoService.deleteElderInfo(id);
-        return Result.success("删除成功");
+        if (id==null){
+            return Result.failure("ID不能为空");
+        }
+        return elderInfoService.deleteElderInfo(id);
     }
 
     //根据ID查询档案
     @GetMapping("/{id}")
     public Result<?> getElderInfoById(@PathVariable Long id) {
+        if (id==null){
+            return Result.failure("ID不能为空");
+        }
         ElderInfo info = elderInfoService.getElderInfoById(id);
+        System.out.println("info: " + info);
         if (info == null) {
-            return Result.success(null); // 或返回空数据，前端自行处理
+            return Result.success("档案不存在"); // 或返回空数据，前端自行处理
         }
         return Result.success(info);
     }
@@ -67,9 +94,12 @@ public class ElderInfoController {
     //根据用户ID查询档案
     @PostMapping("/user/{userId}")
     public Result<?> getElderInfoByUserId(@PathVariable Long userId) {
+        if (userId==null){
+            throw new BusinessException("用户ID不能为空");
+        }
         List<ElderInfo> info = elderInfoService.getElderInfoByUserId(userId);
         if (info == null) {
-            return Result.success(null); // 或返回空数据，前端自行处理
+            return Result.success("档案不存在"); // 或返回空数据，前端自行处理
         }
         return Result.success(info);
     }
@@ -80,7 +110,13 @@ public class ElderInfoController {
      */
     @PostMapping("/bind-account")
     public Result<?> bindElderAccount(@RequestBody BindElderAccountDTO bindDTO) {
-        elderInfoService.bindElderAccount(bindDTO);
+        if(bindDTO.getElderInfoId()==null || bindDTO.getElderuserId()==null){
+            return Result.failure("档案ID和用户ID不能为空");
+        }
+        Result<?> result=elderInfoService.bindElderAccount(bindDTO);
+        if(result.getSuccess()!=200L){
+            return result;
+        }
         ElderInfo info = elderInfoService.getElderInfoById(bindDTO.getElderInfoId());
         return Result.success(info);
     }

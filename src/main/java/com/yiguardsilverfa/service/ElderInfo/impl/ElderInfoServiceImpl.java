@@ -9,11 +9,11 @@ import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.FamilyBind;
+import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.entity.User;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
 import com.yiguardsilverfa.utils.BaseContext;
-import com.yiguardsilverfa.utils.PhoneNumberUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -48,14 +48,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
     @Override
     @Transactional
-    public void addElderInfo(ElderInfoAddDTO addDTO) {
-        if(addDTO.getAge()<=0||addDTO.getAge()>150){
-            throw new BusinessException("年龄不合法");
-        }
-        //检验紧急联系人电话是否合法
-        if (addDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(addDTO.getEmergencyPhone())) {
-            throw new BusinessException("紧急联系人电话格式不正确");
-        }
+    public Result<?> addElderInfo(ElderInfoAddDTO addDTO) {
         //获取当前用户角色
         Integer currentRole = getCurrentUserRole();
         //获取当前userid
@@ -70,21 +63,21 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             //检查该老人是否已有自己的档案
             List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(currentUserId);
             if (existing != null && !existing.isEmpty() && existing.get(0).getStatus() == 1) {
-                throw new BusinessException("您已存在档案，不能重复添加");
+                return Result.failure("您已存在档案，不能重复添加");
             }
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
-                throw new BusinessException("添加档案失败");
+                return Result.failure("添加档案失败");
             }
         } else if (currentRole==2) {
             //如果是家属，那就可以添加档案，同时在family_bind表中添加一条连接数据
             if(addDTO.getRelation()==null|| addDTO.getRelation().isEmpty()){
-                throw new BusinessException("家属添加档案时必须填写与老人的关系");
+                return Result.failure("家属添加档案时必须填写与老人的关系");
             }
             elderInfo.setUserId(currentUserId);
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
-                throw new BusinessException("添加档案失败");
+                return Result.failure("添加档案失败");
             }
             Long elderInfoId=elderInfo.getId();// 获取自动生成的主键
             // 同时插入家属绑定关系
@@ -95,12 +88,12 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             bind.setStatus(1); // 绑定中
             int bindRows = familyBindDAO.insert(bind);
             if (bindRows != 1) {
-                throw new BusinessException("添加家属绑定关系失败");
+                return Result.failure("添加家属绑定关系失败");
             }
         }else {
-            throw new BusinessException("只有老人或家属可以添加档案");
+            return Result.failure("只有老人或家属可以添加档案");
         }
-
+        return Result.success("添加老人档案成功");
         /**
          * 如果是老人添加档案，就直接存uderid
          * 如果是家属添加老人档案，而且老人没注册账号，那么userid存家属id
@@ -110,24 +103,18 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
 
     @Override
-    public void updateElderInfo(ElderInfoUpdateDTO updateDTO) {
-        if (updateDTO.getId() == null) {
-            throw new BusinessException("档案ID不能为空");
-        }
+    public Result<?> updateElderInfo(ElderInfoUpdateDTO updateDTO) {
         ElderInfo existing=elderInfoDAO.selectElderInfoById(updateDTO.getId());
         if (existing == null) {
-            throw new BusinessException("档案不存在");
-        }
-        //检验紧急联系人电话是否合法
-        if (updateDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(updateDTO.getEmergencyPhone())) {
-            throw new BusinessException("紧急联系人电话格式不正确");
+            return Result.failure("档案不存在");
         }
         ElderInfo update = new ElderInfo();
         BeanUtils.copyProperties(updateDTO,update);
         int result = elderInfoDAO.updateElderInfoById(update);
         if (result != 1) {
-            throw new BusinessException("更新档案失败");
+            return Result.failure("更新档案失败");
         }
+        return Result.success(elderInfoDAO.selectElderInfoById(updateDTO.getId()));
     }
 
     /**
@@ -135,7 +122,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
      * @param id：档案ID
      */
     @Override
-    public void deleteElderInfo(Long id) {
+    public Result<?> deleteElderInfo(Long id) {
 /**
  * 删除档案，
  * 如果是家属删除档案应该是断开family_bind的联系，但是elder—info仍然存在
@@ -146,13 +133,13 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         //获取档案信息
         ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(id);
         if (elderInfo == null) {
-            throw new BusinessException("档案不存在");
+            return Result.failure("档案不存在");
         }
         //获取当前用户角色和ID
         Long currentUserId = BaseContext.getCurrentUserId();
         Integer currentRole = loginDAO.selectUserById(currentUserId).getRole();
         if (currentRole == null) {
-            throw new BusinessException("无法获取用户角色");
+            return Result.failure("无法获取用户角色");
         }
         if (currentRole == 1) {
             /**
@@ -161,41 +148,36 @@ public class ElderInfoServiceImpl implements ElderInfoService {
              */
             //判断当前用户ID是否与被删档案ID一致
             if (!currentUserId.equals(elderInfo.getUserId())) {
-                throw new BusinessException("老人只能删除自己的档案");
+                return Result.failure("老人只能删除自己的档案");
             }
             int rows = elderInfoDAO.softDeleteById(id);
             if (rows != 1) {
-                throw new BusinessException("注销档案失败");
+                return Result.failure("注销档案失败");
             }
         } else if (currentRole==2) {
             /**
              * 这里也是做个防御性判断
              */
             // 检查是否有绑定关系
-            int rows = familyBindDAO.deleteByFamilyAndElder(currentUserId, elderInfo.getUserId());
+            int rows = familyBindDAO.deleteByFamilyAndElder(currentUserId, elderInfo.getId());
             if (rows == 0) {
-                throw new BusinessException("您与该老人没有绑定关系，无法解除");
+                return Result.failure("您与该老人没有绑定关系，无法解除");
             }
         }
+        return Result.success("删除档案成功");
     }
 
     @Override
     public ElderInfo getElderInfoById(Long id) {
-        if (id==null){
-            throw new BusinessException("ID不能为空");
-        }
+
         ElderInfo info=elderInfoDAO.selectElderInfoById(id);
-        if(info==null) {
-            throw new BusinessException("档案不存在");
-        }
+
         return info;
     }
 
     @Override
     public List<ElderInfo> getElderInfoByUserId(Long userId) {
-        if (userId==null){
-            throw new BusinessException("用户ID不能为空");
-        }
+
         List<ElderInfo> info=elderInfoDAO.selectElderInfoByUserId(userId);
         if(info==null||info.isEmpty()) {
             return new ArrayList<>();
@@ -233,45 +215,42 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
 
     @Override
-    public void bindElderAccount(BindElderAccountDTO bindDTO) {
+    public Result<?> bindElderAccount(BindElderAccountDTO bindDTO) {
         Long elderInfoId = bindDTO.getElderInfoId();
         Long elderuserId = bindDTO.getElderuserId();
-        if (elderInfoId == null || elderuserId == null) {
-            throw new BusinessException("档案ID和用户ID不能为空");
-        }
         //检查档案是否存在
         ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(elderInfoId);
         if (elderInfo == null) {
-            throw new BusinessException("档案不存在");
+            return Result.failure("档案不存在");
         }
         //检查档案是否已经绑定了老人账号
         Long userId =elderInfo.getUserId();
         if (userId != null) {
             User user = loginDAO.selectUserById(userId);
             if(user != null&&user.getRole()==1){
-                throw new BusinessException("该档案已绑定老人账号，无法重复绑定");
+                return Result.failure("该档案已绑定老人账号，无法重复绑定");
             }
         }
         //检查目标用户是否存在且角色为老人
         User user2 = loginDAO.selectUserById(elderuserId);
         if (user2 == null) {
-            throw new BusinessException("指定的用户不存在");
+            return Result.failure("指定的用户不存在");
         }
         if (user2.getRole() == null||user2.getRole() != 1) {
-            throw new BusinessException("指定的用户不是老人，无法绑定");
+            return Result.failure("指定的用户不是老人，无法绑定");
         }
         //检查该老人账号是否已经绑定了其他档案（唯一性）
         List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(elderuserId);
         if (existing != null && !existing.isEmpty()) {
-            throw new BusinessException("该老人账号已绑定档案（档案ID：" + existing.get(0).getId() + "），不能重复绑定");
+            return Result.failure("该老人账号已绑定档案（档案ID：" + existing.get(0).getId() + "），不能重复绑定");
         }
         ElderInfo update = new ElderInfo();
         update.setId(elderInfoId);
         update.setUserId(elderuserId);
         int result = elderInfoDAO.updateElderInfoById(update);
         if (result != 1) {
-            throw new BusinessException("绑定失败，请稍后重试");
+            return Result.failure("绑定失败，请检查是否输入有误！");
         }
-
+        return Result.success("绑定成功");
     }
 }

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ElderInfoServiceImpl implements ElderInfoService {
@@ -62,8 +63,9 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             //如果是老人，则检验是否已有档案，若有，则不能添加
             //检查该老人是否已有自己的档案
             List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(currentUserId);
-            if (existing != null && !existing.isEmpty() && existing.get(0).getStatus() == 1) {
-                return Result.failure("您已存在档案，不能重复添加");
+            boolean hasActive = existing != null && existing.stream().anyMatch(e -> e.getStatus() == 1);
+            if (hasActive) {
+                return Result.failure("您已存在有效档案，不能重复添加");
             }
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
@@ -135,6 +137,10 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         if (elderInfo == null) {
             return Result.failure("档案不存在");
         }
+        // 如果档案已经是软删除状态，直接返回失败（或成功？根据业务决定）
+        if (elderInfo.getStatus() == 0) {
+            return Result.failure("档案已被删除，无法重复操作");
+        }
         //获取当前用户角色和ID
         Long currentUserId = BaseContext.getCurrentUserId();
         Integer currentRole = loginDAO.selectUserById(currentUserId).getRole();
@@ -163,6 +169,8 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             if (rows == 0) {
                 return Result.failure("您与该老人没有绑定关系，无法解除");
             }
+        }else {
+            return Result.failure("无权删除档案");
         }
         return Result.success("删除档案成功");
     }
@@ -223,14 +231,6 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         if (elderInfo == null) {
             return Result.failure("档案不存在");
         }
-        //检查档案是否已经绑定了老人账号
-        Long userId =elderInfo.getUserId();
-        if (userId != null) {
-            User user = loginDAO.selectUserById(userId);
-            if(user != null&&user.getRole()==1){
-                return Result.failure("该档案已绑定老人账号，无法重复绑定");
-            }
-        }
         //检查目标用户是否存在且角色为老人
         User user2 = loginDAO.selectUserById(elderuserId);
         if (user2 == null) {
@@ -242,7 +242,13 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         //检查该老人账号是否已经绑定了其他档案（唯一性）
         List<ElderInfo> existing = elderInfoDAO.selectElderInfoByUserId(elderuserId);
         if (existing != null && !existing.isEmpty()) {
-            return Result.failure("该老人账号已绑定档案（档案ID：" + existing.get(0).getId() + "），不能重复绑定");
+            return Result.failure("该老人账号已绑定档案，不能重复绑定");
+        }
+
+        Long currentUserId = BaseContext.getCurrentUserId();
+        int bind = familyBindDAO.selectByFamilyAndElder(currentUserId, elderInfoId);
+        if (bind == 0) {
+            return Result.failure("您没有权限绑定此档案");
         }
         ElderInfo update = new ElderInfo();
         update.setId(elderInfoId);
@@ -252,5 +258,40 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             return Result.failure("绑定失败，请检查是否输入有误！");
         }
         return Result.success("绑定成功");
+    }
+
+    /**
+     * 获取家属绑定的所有老人名字
+     */
+    @Override
+    public Result<?> getBoundElderNames() {
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer currentRole = getCurrentUserRole();
+        if (currentRole != 2) {
+            return Result.failure("只有家属可以查看绑定的老人列表");
+        }
+        // 获取该家属的绑定关系
+        List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
+        if (binds == null || binds.isEmpty()) {
+            return Result.success(new ArrayList<>()); // 返回空列表而非失败
+        }
+        //提取 elderId 列表
+        List<Long> elderIds = binds.stream()
+                .filter(bind -> bind.getStatus() == 1)
+                .map(FamilyBind::getElderId)
+                .collect(Collectors.toList());
+
+        if (elderIds.isEmpty()) {
+            return Result.success(new ArrayList<>());
+        }
+        //遍历获取老人姓名
+        List<String> elderNames = new ArrayList<>();
+        for (Long elderId : elderIds) {
+            ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(elderId);
+            if (elderInfo != null && elderInfo.getStatus() == 1) {
+                elderNames.add(elderInfo.getName());
+            }
+        }
+        return Result.success(elderNames);
     }
 }

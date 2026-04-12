@@ -24,5 +24,8 @@ public interface ElderInfoService {
     SearchUserInfoDTO getUserByUsername(String username);
     //绑定档案所对应的老人账号
     Result<?> bindElderAccount(BindElderAccountDTO bindDTO);
-
+    /**
+     * 家属获取所有绑定老人的姓名列表
+     */
+    Result<?> getBoundElderNames();
 }

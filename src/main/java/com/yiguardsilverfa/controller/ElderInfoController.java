@@ -10,10 +10,12 @@ import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.ElderInfo.ElderInfoService;
+import com.yiguardsilverfa.utils.BaseContext;
 import com.yiguardsilverfa.utils.PhoneNumberUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -30,6 +32,9 @@ public class ElderInfoController {
      */
     @PostMapping("/add")
     public Result<?> addElderInfo(@RequestBody ElderInfoAddDTO addDTO) {
+        if(addDTO.getName() == null || addDTO.getName().trim().isEmpty()){
+            return Result.failure("姓名不能为空");
+        }
         if(addDTO.getAge()<=0||addDTO.getAge()>150){
             return Result.failure("年龄不合法");
         }
@@ -59,6 +64,9 @@ public class ElderInfoController {
         }
         if (updateDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(updateDTO.getEmergencyPhone())) {
             return Result.failure("紧急联系人电话格式不正确");
+        }
+        if(updateDTO.getWeight()<=0||updateDTO.getWeight()>500){
+            return Result.failure("体重不合法");
         }
         return elderInfoService.updateElderInfo(updateDTO);
     }
@@ -98,9 +106,6 @@ public class ElderInfoController {
             throw new BusinessException("用户ID不能为空");
         }
         List<ElderInfo> info = elderInfoService.getElderInfoByUserId(userId);
-        if (info == null) {
-            return Result.success("档案不存在"); // 或返回空数据，前端自行处理
-        }
         return Result.success(info);
     }
 
@@ -135,7 +140,15 @@ public class ElderInfoController {
     }
 
     /**
-     * 家属绑定老人档案
+     * 家属修改绑定的老人档案
      * 老人档案是已经有绑定老人用户的
      */
+
+    /**
+     *  家属获取所有绑定老人的姓名列表
+     */
+    @GetMapping("/bound-elders/names")
+    public Result<?> getBoundElderNames() {
+        return elderInfoService.getBoundElderNames();
+    }
 }

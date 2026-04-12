@@ -48,11 +48,14 @@
     <select id="selectByElderId" resultMap="BaseResultMap">
         SELECT * FROM medicine_info WHERE elder_id = #{elderId} AND status = 1
     </select>
+
     <select id="selectByCondition" resultMap="BaseResultMap">
-        SELECT * FROM medicine_info
+        SELECT m.* FROM medicine_info m
+        JOIN elder_info e ON m.elder_id = e.id
         <where>
+            e.status = 1
             <if test="elderIds != null and elderIds.size() > 0">
-                AND elder_id IN
+                AND m.elder_id IN
                 <foreach collection="elderIds" item="id" open="(" separator="," close=")">
                     #{id}
                 </foreach>

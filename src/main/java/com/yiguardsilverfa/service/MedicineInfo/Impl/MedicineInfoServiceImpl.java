@@ -10,6 +10,7 @@ import com.yiguardsilverfa.dto.medicineInfo.MedicineUpdateDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.FamilyBind;
 import com.yiguardsilverfa.entity.MedicineInfo;
+import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.MedicineInfo.MedicineInfoService;
 import com.yiguardsilverfa.utils.BaseContext;
@@ -80,7 +81,7 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      */
     @Override
     @Transactional
-    public Boolean addMedicineInfo(MedicineAddDTO medicineAddDTO) {
+    public Result<?> addMedicineInfo(MedicineAddDTO medicineAddDTO) {
         Long currentUserId = BaseContext.getCurrentUserId();
         Integer currentRole = getCurrentUserRole();
         MedicineInfo medicine = new MedicineInfo();
@@ -90,67 +91,82 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
             //老人添加药品
             List<Long> elderIds = getAccessibleElderIds();
             if (elderIds.isEmpty()){
-                throw new BusinessException("请先添加您的档案，再添加药品");
+                return Result.failure("请先添加您的档案，再添加药品");
             }
             // 老人只有一份档案
             medicine.setElderId(elderIds.get(0));
         } else if (currentRole==2) {
             //家属添加药品
             if (medicineAddDTO.getElderId() == null) {
-                throw new BusinessException("家属添加药品时必须指定老人账号");
+                return Result.failure("家属添加药品时必须指定老人账号");
             }
             Long elderUserId = medicineAddDTO.getElderId(); // 前端传入的老人用户ID
             // 1. 根据老人用户ID查询档案信息
             List<ElderInfo> elderInfo = elderInfoDAO.selectElderInfoByUserId(elderUserId);
             if (elderInfo.isEmpty()|| elderInfo.get(0).getStatus() != 1) {
-                throw new BusinessException("该老人尚未创建档案，请先创建档案");
+                return Result.failure("该老人尚未创建档案，请先创建档案");
             }
             Long elderInfoId = elderInfo.get(0).getId(); // 档案ID
             // 校验该老人是否与当前家属绑定
             int bind = familyBindDAO.selectByFamilyAndElder(currentUserId, elderInfoId);
             if (bind == 0) {
-                throw new BusinessException("您未绑定该老人，无法为其添加药品");
+                return Result.failure("您未绑定该老人，无法为其添加药品");
             }
             medicine.setElderId(elderInfoId);
         }else {
-            throw new BusinessException("只有老人或家属可以添加药品");
+            return Result.failure("只有老人或家属可以添加药品");
         }
         medicine.setStatus(1);
         int rows = medicineInfoDAO.insertMedicine(medicine);
-        return rows == 1;
+        if (rows==1){
+            return Result.success("添加药品信息成功！");
+        }else{
+            return Result.failure("添加药品信息失败！");
+        }
     }
 
     @Override
     @Transactional
-    public Boolean updateMedicineInfo(MedicineUpdateDTO medicineUpdateDTO) {
-        if (medicineUpdateDTO.getId() == null) {
-            throw new BusinessException("药品ID不能为空");
-        }
+    public Result<?> updateMedicineInfo(MedicineUpdateDTO medicineUpdateDTO) {
         // 查询原药品
         MedicineInfo existing = medicineInfoDAO.selectById(medicineUpdateDTO.getId());
         if (existing == null) {
-            throw new BusinessException("药品不存在");
+            return Result.failure("药品不存在");
+        }
+        //权限校验：检查药品所属档案是否可访问
+        List<Long> accessibleElderIds = getAccessibleElderIds();
+        if (!accessibleElderIds.contains(existing.getElderId())) {
+            return Result.failure("无权修改该药品");
         }
         MedicineInfo update = new MedicineInfo();
         BeanUtils.copyProperties(medicineUpdateDTO, update);
         int rows = medicineInfoDAO.updateMedicineById(update);
-        return rows == 1;
+        if (rows==1){
+            return Result.success(medicineInfoDAO.selectById(update.getId()));
+        }else{
+            return Result.failure("修改药品信息失败！");
+        }
     }
     /**
      * 删除药品信息
      */
     @Override
     @Transactional
-    public Boolean deleteMedicineInfo(Long id) {
-        if (id == null) {
-            throw new BusinessException("药品ID不能为空");
-        }
+    public Result<?> deleteMedicineInfo(Long id) {
         MedicineInfo existing = medicineInfoDAO.selectById(id);
         if (existing == null) {
-            throw new BusinessException("药品不存在");
+            return Result.failure("药品不存在");
+        }
+        List<Long> accessibleElderIds = getAccessibleElderIds();
+        if (!accessibleElderIds.contains(existing.getElderId())) {
+            return Result.failure("无权删除该药品");
         }
         int rows = medicineInfoDAO.softdeleteById(id);
-        return rows == 1;
+        if (rows==1){
+            return Result.success("删除药品信息成功！");
+        }else{
+            return Result.failure("删除药品信息失败！");
+        }
     }
 
     /**
@@ -161,6 +177,11 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
         if (elderId == null) {
             return new ArrayList<>();
         }
+        // 权限校验：当前用户是否可访问该档案
+        List<Long> accessibleElderIds = getAccessibleElderIds();
+        if (!accessibleElderIds.contains(elderId)) {
+            throw new BusinessException("无权查看该老人的药品");
+        }
         return medicineInfoDAO.selectByElderId(elderId);
     }
 
@@ -169,19 +190,19 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      * @return
      */
     @Override
-    public List<MedicineInfo> getMyMedicineList() {
+    public Result<?> getMyMedicineList() {
         Long currentUserId = BaseContext.getCurrentUserId();
         Integer role = getCurrentUserRole();
         if (role != 1) {
-            throw new BusinessException("只有老人可以查看自己的药品列表");
+            return Result.failure("只有老人可以查看自己的药品列表");
         }
         // 查询老人的档案
         List<ElderInfo> elder = elderInfoDAO.selectElderInfoByUserId(currentUserId);
         if (elder.isEmpty() || elder.get(0).getStatus() != 1) {
-            throw new BusinessException("请先创建您的档案");
+            return Result.failure("请先创建您的档案");
         }
         // 根据档案ID查询药品
-        return medicineInfoDAO.selectByElderId(elder.get(0).getId());
+        return Result.success(medicineInfoDAO.selectByElderId(elder.get(0).getId()));
     }
 
     /**

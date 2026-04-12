@@ -7,7 +7,9 @@ import com.yiguardsilverfa.constant.LoginConstant;
 import com.yiguardsilverfa.dao.ElderInfoDAO;
 import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.*;
+import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.dto.user.UpdateUserInfoDTO;
+import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.entity.User;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.EmailService;
@@ -229,24 +231,24 @@ public class LoginServiceImpl implements LoginService {
     }
     // 修改用户信息
     @Override
-    public void updateUserInfo(Long userId, UpdateUserInfoDTO updateUserInfoDTO) {
+    public Result<?> updateUserInfo(Long userId, UpdateUserInfoDTO updateUserInfoDTO) {
         //检查用户是否存在
         User user=loginDAO.selectUserById(userId);
         if(user==null){
-            throw new BusinessException(ErrorConstant.USER_NOT_EXIST);
+            return Result.failure(ErrorConstant.USER_NOT_EXIST);
         }
         //如果修改手机号，检查新手机号是否已被其他用户占用
         if(updateUserInfoDTO.getPhone()!=null&&!updateUserInfoDTO.getPhone().equals(user.getPhone())){
             User existUser=loginDAO.selectUserByPhone(updateUserInfoDTO.getPhone());
             if(existUser!=null && !existUser.getId().equals(userId)){
-                throw new BusinessException(ErrorConstant.PHONE_ALREADY_EXIST);
+                return Result.failure(ErrorConstant.PHONE_ALREADY_EXIST);
             }
         }
         //如果修改邮箱，检查是否已被占用
         if(updateUserInfoDTO.getEmail()!=null&&!updateUserInfoDTO.getEmail().equals(user.getEmail())){
             User existUser=loginDAO.selectUserByEmail(updateUserInfoDTO.getEmail());
             if(existUser!=null && !existUser.getId().equals(userId)){
-                throw new BusinessException(ErrorConstant.EMAIL_ALREADY_EXIST);
+                return Result.failure(ErrorConstant.EMAIL_ALREADY_EXIST);
             }
         }
         //将更新内容拷贝到用户对象(不覆盖 id、密码等）
@@ -254,22 +256,26 @@ public class LoginServiceImpl implements LoginService {
         //更新用户信息
         int rows=loginDAO.updateUserSelective(user);
         if(rows!=1){
-            throw new BusinessException("修改失败，请重试");
+            return Result.failure("修改失败，请重试");
         }
+        User user1=loginDAO.selectUserById(userId);
+        SearchUserInfoDTO searchUserInfoDTO=new SearchUserInfoDTO();
+        BeanUtils.copyProperties(user1,searchUserInfoDTO);
+        return Result.success(searchUserInfoDTO);
     }
     @Autowired
     private ElderInfoDAO elderInfoDAO;
     @Override
-    public void cancelUser(Long userId) {
+    public Result<?> cancelUser(Long userId) {
         //检查用户是否存在且状态正常
         User user=loginDAO.selectUserById(userId);
         if(user==null||user.getStatus()!=1){
-            throw new BusinessException(ErrorConstant.USER_NOT_EXIST);
+            return Result.failure(ErrorConstant.USER_NOT_EXIST);
         }
         // 更新用户状态为取消
         int rows=loginDAO.logout(userId);
         if(rows!=1){
-            throw new BusinessException(ErrorConstant.CANCELED_FAILED);
+            return Result.failure(ErrorConstant.CANCELED_FAILED);
         }
         //如果是老人注销，那么老人信息那里改状态为0
         if(user.getRole()==1){
@@ -288,5 +294,6 @@ public class LoginServiceImpl implements LoginService {
         if (jwt != null) {
             stringRedisTemplate.delete(LoginConstant.TOKEN_CACHE_PREFIX + jwt);
         }
+        return Result.success("注销成功");
     }
 }

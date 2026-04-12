@@ -153,8 +153,7 @@ public class LoginController {
                 ", nickname=" + updateUserInfoDTO.getNickname());
         Long userId = BaseContext.getCurrentUserId();
         System.out.println("当前登录用户ID = " + userId);
-        loginService.updateUserInfo(userId,updateUserInfoDTO);
-        return Result.success("修改成功");
+        return loginService.updateUserInfo(userId,updateUserInfoDTO);
     }
 
     /**
@@ -163,8 +162,7 @@ public class LoginController {
     @DeleteMapping("/users/canel")
     public Result<?> cancelUser() {
         Long userId = BaseContext.getCurrentUserId();
-        loginService.cancelUser(userId);
-        return Result.success("注销成功");
+        return loginService.cancelUser(userId);
     }
 
 }

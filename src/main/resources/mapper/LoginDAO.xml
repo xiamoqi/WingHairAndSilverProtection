@@ -40,6 +40,7 @@
     <update id="updateUserSelective" parameterType="com.yiguardsilverfa.entity.User">
         UPDATE sys_user
         <set>
+            <if test="username != null">username = #{username},</if>
             <if test="nickname != null">nickname = #{nickname},</if>
             <if test="phone != null">phone = #{phone},</if>
             <if test="email != null">email = #{email},</if>

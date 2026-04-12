@@ -5,6 +5,10 @@ import lombok.Data;
 @Data
 public class UpdateUserInfoDTO {
     /**
+     * 真实姓名
+     */
+    private String realName;
+    /**
      * 昵称
      */
     private String nickname;

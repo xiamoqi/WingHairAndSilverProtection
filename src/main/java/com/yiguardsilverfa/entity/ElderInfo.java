@@ -66,5 +66,5 @@ public class ElderInfo {
      * 更新时间
      **/
     LocalDateTime updateTime;
-    private Integer status;  // 1未删除，0已删除
+    Integer status;  // 1未删除，0已删除
 }

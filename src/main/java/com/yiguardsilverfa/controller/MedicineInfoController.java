@@ -6,6 +6,7 @@ import com.yiguardsilverfa.dto.medicineInfo.MedicineSelectDTO;
 import com.yiguardsilverfa.dto.medicineInfo.MedicineUpdateDTO;
 import com.yiguardsilverfa.entity.MedicineInfo;
 import com.yiguardsilverfa.entity.Result;
+import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.MedicineInfo.MedicineInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -23,12 +24,14 @@ public class MedicineInfoController {
      */
     @PostMapping("/add")
     public Result<?> addMedicine(@RequestBody MedicineAddDTO addDTO) {
-        Boolean success = medicineInfoService.addMedicineInfo(addDTO);
-        if (success) {
-            return Result.success("添加成功");
-        } else {
-            return Result.failure("添加失败");
+        if(addDTO.getMedicineName()==null||addDTO.getMedicineName().trim().length()==0 ){
+            return Result.failure("药品名称不能为空");
         }
+        if(addDTO.getQuantity()<0){
+            return Result.failure("药品数量不能小于0");
+        }
+        return medicineInfoService.addMedicineInfo(addDTO);
+
     }
 
     /**
@@ -36,12 +39,14 @@ public class MedicineInfoController {
      */
     @PostMapping("/update")
     public Result<?> updateMedicine(@RequestBody MedicineUpdateDTO updateDTO) {
-        Boolean success = medicineInfoService.updateMedicineInfo(updateDTO);
-        if (success) {
-            return Result.success("修改成功");
-        } else {
-            return Result.failure("修改失败");
+        if (updateDTO.getId() == null) {
+            return Result.failure("药品ID不能为空");
         }
+        if(updateDTO.getQuantity()!=null&&updateDTO.getQuantity()<0){
+            return Result.failure("药品数量不能小于0");
+        }
+        return medicineInfoService.updateMedicineInfo(updateDTO);
+
     }
 
     /**
@@ -49,12 +54,11 @@ public class MedicineInfoController {
      */
     @DeleteMapping("/delete/{id}")
     public Result<?> deleteMedicine(@PathVariable Long id) {
-        Boolean success = medicineInfoService.deleteMedicineInfo(id);
-        if (success) {
-            return Result.success("删除成功");
-        } else {
-            return Result.failure("删除失败");
+        if (id == null) {
+            throw new BusinessException("药品ID不能为空");
         }
+        return medicineInfoService.deleteMedicineInfo(id);
+
     }
 
     /**
@@ -67,12 +71,11 @@ public class MedicineInfoController {
     }
 
     /**
-     * 老人获取自己的药品列表（无需参数）
+     * 老人获取自己所有的药品信息（无需参数）
      */
     @GetMapping("/my-list")
-    public Result<List<MedicineInfo>> getMyMedicineList() {
-        List<MedicineInfo> list = medicineInfoService.getMyMedicineList();
-        return Result.success(list);
+    public Result<?> getMyMedicineList() {
+        return medicineInfoService.getMyMedicineList();
     }
 
     /**

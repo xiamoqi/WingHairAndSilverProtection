@@ -304,4 +304,31 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         }
         return Result.success(resultList);
     }
+
+    @Override
+    public List<ElderInfo> getMyBindElderInfos() {
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer role = getCurrentUserRole();
+
+        // 老人：查自己
+        if (role == 1) {
+            return elderInfoDAO.selectElderInfoByUserId(currentUserId);
+        }
+
+        // 家属：查绑定的老人
+        if (role == 2) {
+            List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
+            if (binds == null || binds.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Long> elderIds = binds.stream()
+                    .map(FamilyBind::getElderId)
+                    .collect(Collectors.toList());
+
+            return elderInfoDAO.selectElderInfoByIds(elderIds);
+        }
+
+        return new ArrayList<>();
+    }
 }

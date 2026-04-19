@@ -45,4 +45,6 @@ public interface ElderInfoDAO {
      * 管理员恢复删除
      */
     int restoreById(@Param("id") Long id);
+
+    List<ElderInfo> selectElderInfoByIds(List<Long> elderIds);
 }

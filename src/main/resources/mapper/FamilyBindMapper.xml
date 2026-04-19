@@ -30,7 +30,7 @@
     <select id="selectByFamilyAndElder" resultType="int">
         SELECT COUNT(*) FROM family_bind
         WHERE family_user_id = #{familyUserId}
-          AND elder_user_id = #{elderUserId}
+          AND elder_id = #{elderId}
           AND status = 1
     </select>
     <update id="updateElderUserId">

@@ -6,6 +6,7 @@ import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindUpdateDTO;
 import com.yiguardsilverfa.entity.MedicineRemind;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.service.MedicineRemind.MedicineRemindService;
+import com.yiguardsilverfa.utils.BaseContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,8 +18,12 @@ public class MedicineRemindController {
     @Autowired
     private MedicineRemindService medicineRemindService;
 
-    @PostMapping("/add")
+    @PostMapping
     public Result<?> addRemind(@RequestBody MedicineRemindAddDTO addDTO) {
+        Long userId = BaseContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.unauthorized();
+        }
         if (addDTO.getMedicineName()==null||addDTO.getMedicineName().trim().length()==0){
             return Result.failure("请输入药物的名字");
         }
@@ -26,23 +31,36 @@ public class MedicineRemindController {
     }
 
     @PutMapping("/{id}")
-    public Result<?> updateRemind(@RequestBody MedicineRemindUpdateDTO updateDTO) {
-        if (updateDTO.getId()==null){
+    public Result<?> updateRemind(@PathVariable Long id,@RequestBody MedicineRemindUpdateDTO updateDTO) {
+        Long userId = BaseContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.unauthorized();
+        }
+        if (id == null) {
             return Result.failure("请选择要修改的提醒");
         }
+        updateDTO.setId(id);
         return medicineRemindService.updateRemind(updateDTO);
     }
 
     @DeleteMapping("/{id}")
     public Result<?> deleteRemind(@PathVariable Long id) {
-        if (id==null){
+        Long userId = BaseContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.unauthorized();
+        }
+        if (id == null) {
             return Result.failure("请选择要删除的提醒");
         }
         return medicineRemindService.deleteRemind(id);
     }
 
-    @GetMapping("/my-reminds")
+    @GetMapping("/my-list")
     public Result<List<MedicineRemind>> getMyReminds(){
+        Long userId = BaseContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.failure(null, "未登录");
+        }
         List<MedicineRemind> list = medicineRemindService.getMyReminds();
         return Result.success(list);
     }

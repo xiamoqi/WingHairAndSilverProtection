@@ -9,6 +9,7 @@ import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.*;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.dto.user.UpdateUserInfoDTO;
+import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.entity.User;
 import com.yiguardsilverfa.exception.BusinessException;
@@ -25,7 +26,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -230,12 +233,21 @@ public class LoginServiceImpl implements LoginService {
         return code;
     }
     // 修改用户信息
+    @Transactional
     @Override
     public Result<?> updateUserInfo(Long userId, UpdateUserInfoDTO updateUserInfoDTO) {
         //检查用户是否存在
         User user=loginDAO.selectUserById(userId);
         if(user==null){
             return Result.failure(ErrorConstant.USER_NOT_EXIST);
+        }
+        String oldName= user.getUsername();
+        String newName=updateUserInfoDTO.getUsername();
+        if (newName != null && !newName.equals(oldName)) {
+            int count = loginDAO.checkUsernameExists(newName);
+            if (count > 0) {
+                return Result.failure("用户名已存在");
+            }
         }
         //如果修改手机号，检查新手机号是否已被其他用户占用
         if(updateUserInfoDTO.getPhone()!=null&&!updateUserInfoDTO.getPhone().equals(user.getPhone())){
@@ -252,12 +264,28 @@ public class LoginServiceImpl implements LoginService {
             }
         }
         //将更新内容拷贝到用户对象(不覆盖 id、密码等）
-        BeanUtils.copyProperties(updateUserInfoDTO,user,"id","username","password","role","status","createTime","updateTime");
+        BeanUtils.copyProperties(updateUserInfoDTO,user,"id","password","role","status","createTime","updateTime");
         //更新用户信息
         int rows=loginDAO.updateUserSelective(user);
         if(rows!=1){
             return Result.failure("修改失败，请重试");
         }
+        //老人修改自己的真实姓名
+        if (user.getRole()==1){
+            //若修改用户名，则档案里的名字也修改
+            if (newName!=null&&!newName.isEmpty() && !newName.equals(oldName)){
+                List<ElderInfo> elders = elderInfoDAO.selectElderInfoByUserId(userId);
+                if(!elders.isEmpty()){
+                    ElderInfo elderInfo=new ElderInfo();
+                    elderInfo.setId(elders.get(0).getId());
+                    elderInfo.setName(newName);
+                    int elderRows = elderInfoDAO.updateElderInfoById(elderInfo);
+                    if (elderRows != 1) {
+                        return Result.failure("同步档案姓名失败");
+                    }                }
+            }
+        }
+
         User user1=loginDAO.selectUserById(userId);
         SearchUserInfoDTO searchUserInfoDTO=new SearchUserInfoDTO();
         BeanUtils.copyProperties(user1,searchUserInfoDTO);

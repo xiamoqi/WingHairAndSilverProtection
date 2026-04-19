@@ -59,13 +59,16 @@ public class ElderInfoController {
         if(updateDTO.getId() == null){
             return Result.failure("档案ID不能为空");
         }
-        if(updateDTO.getAge()<=0||updateDTO.getAge()>150){
+        Integer age = updateDTO.getAge();
+        if (age != null && (age <= 0 || age > 150)) {
             return Result.failure("年龄不合法");
         }
-        if (updateDTO.getEmergencyPhone() != null && !PhoneNumberUtil.isValidPhoneNumber(updateDTO.getEmergencyPhone())) {
+        String phone = updateDTO.getEmergencyPhone();
+        if (phone != null && !PhoneNumberUtil.isValidPhoneNumber(phone)) {
             return Result.failure("紧急联系人电话格式不正确");
         }
-        if(updateDTO.getWeight()<=0||updateDTO.getWeight()>500){
+        Integer weight = updateDTO.getWeight();
+        if (weight != null && (weight <= 0 || weight > 500)) {
             return Result.failure("体重不合法");
         }
         return elderInfoService.updateElderInfo(updateDTO);

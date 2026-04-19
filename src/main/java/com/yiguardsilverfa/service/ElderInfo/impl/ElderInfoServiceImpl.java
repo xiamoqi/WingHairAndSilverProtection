@@ -105,6 +105,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
 
     }
 
+    @Transactional
     @Override
     public Result<?> updateElderInfo(ElderInfoUpdateDTO updateDTO) {
         ElderInfo existing=elderInfoDAO.selectElderInfoById(updateDTO.getId());
@@ -116,6 +117,27 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         int result = elderInfoDAO.updateElderInfoById(update);
         if (result != 1) {
             return Result.failure("更新档案失败");
+        }
+        //判断该老人档案是否绑定了老人的账号
+        Long elderUserId=existing.getUserId();
+        String newName= updateDTO.getName();
+        String oldName = existing.getName();
+
+        if (elderUserId!=null&&newName!=null&&!newName.isEmpty() && !newName.equals(oldName)){
+            if (loginDAO.checkUsernameExists(newName) > 0){
+                return Result.failure("该名称已存在！");
+            }
+            User user=loginDAO.selectUserById(elderUserId);
+            //确保是老人角色
+            if(user!=null&&user.getRole()==1){
+                User updateUser = new User();
+                updateUser.setId(elderUserId);
+                updateUser.setUsername(newName);
+                int userRows = loginDAO.updateUserSelective(updateUser);
+                if (userRows != 1) {
+                    return Result.failure("同步更新用户姓名失败");
+                }
+            }
         }
         return Result.success(elderInfoDAO.selectElderInfoById(updateDTO.getId()));
     }

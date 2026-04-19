@@ -7,7 +7,7 @@ public class UpdateUserInfoDTO {
     /**
      * 真实姓名
      */
-    private String realName;
+    private String username;
     /**
      * 昵称
      */

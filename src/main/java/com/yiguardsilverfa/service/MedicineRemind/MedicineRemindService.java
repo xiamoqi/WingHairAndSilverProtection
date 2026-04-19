@@ -12,5 +12,10 @@ public interface MedicineRemindService {
     Result<?> addRemind(MedicineRemindAddDTO addDTO);
     Result<?> updateRemind(MedicineRemindUpdateDTO updateDTO);
     Result<?> deleteRemind(Long id);
+    
     List<MedicineRemind> getMyReminds();                // 老人自己的提醒
+
+    MedicineRemind getById(Long id);
+
+    List<MedicineRemind> getListByElderId(Long elderId);
 }

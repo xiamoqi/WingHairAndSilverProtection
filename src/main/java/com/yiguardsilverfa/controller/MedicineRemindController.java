@@ -55,6 +55,12 @@ public class MedicineRemindController {
         return medicineRemindService.deleteRemind(id);
     }
 
+    @GetMapping("/{id}")
+    public Result<?> getById(@PathVariable Long id) {
+        MedicineRemind remind = medicineRemindService.getById(id);
+        return Result.success(remind);
+    }
+
     @GetMapping("/my-list")
     public Result<List<MedicineRemind>> getMyReminds(){
         Long userId = BaseContext.getCurrentUserId();
@@ -65,4 +71,9 @@ public class MedicineRemindController {
         return Result.success(list);
     }
 
+    @GetMapping("/elder/{elderId}")
+    public Result<List<MedicineRemind>> getByElderId(@PathVariable Long elderId) {
+        List<MedicineRemind> list = medicineRemindService.getListByElderId(elderId);
+        return Result.success(list);
+    }
 }

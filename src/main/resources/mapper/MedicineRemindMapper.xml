@@ -48,3 +48,5 @@
         SELECT * FROM medicine_remind WHERE elder_id = #{elderId} ORDER BY remind_time
     </select>
 </mapper>
+
+

@@ -7,10 +7,7 @@ import com.yiguardsilverfa.dao.MedicineInfoDAO;
 import com.yiguardsilverfa.dto.medicineInfo.MedicineAddDTO;
 import com.yiguardsilverfa.dto.medicineInfo.MedicineSelectDTO;
 import com.yiguardsilverfa.dto.medicineInfo.MedicineUpdateDTO;
-import com.yiguardsilverfa.entity.ElderInfo;
-import com.yiguardsilverfa.entity.FamilyBind;
-import com.yiguardsilverfa.entity.MedicineInfo;
-import com.yiguardsilverfa.entity.Result;
+import com.yiguardsilverfa.entity.*;
 import com.yiguardsilverfa.exception.BusinessException;
 import com.yiguardsilverfa.service.MedicineInfo.MedicineInfoService;
 import com.yiguardsilverfa.utils.BaseContext;
@@ -67,12 +64,15 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
             }
         } else if (role==2) {
             List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
-            elderIds = binds.stream()
-                    .filter(bind -> bind.getStatus() == 1)
-                    .map(FamilyBind::getElderId)
-                    .collect(Collectors.toList());
-            if (elderIds.isEmpty()) {
-                return Result.success(elderIds);
+            for (FamilyBind bind : binds) {
+                if (bind.getStatus() != 1) continue;
+
+                List<ElderInfo> infos = elderInfoDAO.selectElderInfoByUserId(bind.getElderUserId());
+                for (ElderInfo info : infos) {
+                    if (info.getStatus() == 1) {
+                        elderIds.add(info.getId());
+                    }
+                }
             }
         }else {
             return Result.failure("无权限访问");
@@ -116,17 +116,23 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
                 return Result.failure("家属添加药品时必须指定老人账号");
             }
             Long elderUserId = medicineAddDTO.getElderId(); // 前端传入的老人用户ID
-            // 1. 根据老人用户ID查询档案信息
+            // 检查老人是否存在
+            User elderUser = loginDAO.selectUserById(elderUserId);
+            if (elderUser == null || elderUser.getRole() != 1) {
+                return Result.failure("该老人账号不存在");
+            }
+            // 校验该老人是否与当前家属绑定
+            int bind = familyBindDAO.selectByFamilyAndElder(currentUserId, elderUserId);
+            if (bind == 0) {
+                return Result.failure("您未绑定该老人，无法为其添加药品");
+            }
+            // 根据老人用户ID查询档案信息
             List<ElderInfo> elderInfo = elderInfoDAO.selectElderInfoByUserId(elderUserId);
             if (elderInfo.isEmpty()|| elderInfo.get(0).getStatus() != 1) {
                 return Result.failure("该老人尚未创建档案，请先创建档案");
             }
             Long elderInfoId = elderInfo.get(0).getId(); // 档案ID
-            // 校验该老人是否与当前家属绑定
-            int bind = familyBindDAO.selectByFamilyAndElder(currentUserId, elderInfoId);
-            if (bind == 0) {
-                return Result.failure("您未绑定该老人，无法为其添加药品");
-            }
+
             medicine.setElderId(elderInfoId);
         }else {
             return Result.failure("只有老人或家属可以添加药品");

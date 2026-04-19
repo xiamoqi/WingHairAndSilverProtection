@@ -13,5 +13,6 @@ public interface FamilyBindDAO {
     //根据家属ID和老人ID更新状态为0（解除绑定)
     int deleteByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderId") Long elderId);
     //根据家属ID和老人档案ID统计绑定数量（用于校验）
-    int selectByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderId") Long elderId);
+    int selectByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderUserId") Long elderUserId);
+    void updateElderUserId(FamilyBind bind);
 }

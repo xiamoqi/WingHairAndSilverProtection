@@ -103,7 +103,7 @@ public class ElderInfoController {
     @PostMapping("/user/{userId}")
     public Result<?> getElderInfoByUserId(@PathVariable Long userId) {
         if (userId==null){
-            throw new BusinessException("用户ID不能为空");
+            return Result.failure("用户ID不能为空");
         }
         List<ElderInfo> info = elderInfoService.getElderInfoByUserId(userId);
         return Result.success(info);

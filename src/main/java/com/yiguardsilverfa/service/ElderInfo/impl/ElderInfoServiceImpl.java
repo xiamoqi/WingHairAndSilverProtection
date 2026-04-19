@@ -6,6 +6,7 @@ import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
 import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
+import com.yiguardsilverfa.dto.familyBind.BindElderInfoDTO;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.FamilyBind;
@@ -275,23 +276,19 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         if (binds == null || binds.isEmpty()) {
             return Result.success(new ArrayList<>()); // 返回空列表而非失败
         }
-        //提取 elderId 列表
-        List<Long> elderIds = binds.stream()
-                .filter(bind -> bind.getStatus() == 1)
-                .map(FamilyBind::getElderId)
-                .collect(Collectors.toList());
-
-        if (elderIds.isEmpty()) {
-            return Result.success(new ArrayList<>());
-        }
-        //遍历获取老人姓名
-        List<String> elderNames = new ArrayList<>();
-        for (Long elderId : elderIds) {
-            ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(elderId);
-            if (elderInfo != null && elderInfo.getStatus() == 1) {
-                elderNames.add(elderInfo.getName());
+        List<BindElderInfoDTO> resultList=new ArrayList<>();
+        for(FamilyBind bind : binds){
+            if(bind.getStatus()!=1)
+                continue;
+            ElderInfo elderInfo=elderInfoDAO.selectElderInfoById(bind.getElderId());
+            if (elderInfo!=null&&elderInfo.getStatus()==1){
+                BindElderInfoDTO dto=new BindElderInfoDTO();
+                dto.setElderInfoId(elderInfo.getId());
+                dto.setUserId(elderInfo.getUserId());
+                dto.setUsername(elderInfo.getName());
+                resultList.add(dto);
             }
         }
-        return Result.success(elderNames);
+        return Result.success(resultList);
     }
 }

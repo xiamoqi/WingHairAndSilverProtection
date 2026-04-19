@@ -24,7 +24,7 @@ public interface MedicineInfoService {
     /**
      * 根据老人档案ID查询药品信息
      */
-    List<MedicineInfo> getMedicineInfoByElderId(Long elderId);
+    Result<?> getMedicineInfoByElderId(Long elderId);
     /**
      * 老人获取自己所有的药品信息
      */
@@ -33,5 +33,5 @@ public interface MedicineInfoService {
     /**
      * 模糊查询药品信息
      */
-    List<MedicineInfo> getMedicineInfoByCondition(MedicineSelectDTO medicineSelectDTO);
+    Result<?> getMedicineInfoByCondition(MedicineSelectDTO medicineSelectDTO);
 }

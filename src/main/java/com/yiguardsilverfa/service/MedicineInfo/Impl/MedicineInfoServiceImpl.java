@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.yiguardsilverfa.entity.Result.UNAUTHORIZED_CODE;
+
 @Service
 public class MedicineInfoServiceImpl implements MedicineInfoService {
     @Autowired
@@ -37,23 +39,25 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
     /**
      * 获取当前用户角色
      */
-    private Integer getCurrentUserRole() {
+    private Result<?> getCurrentUserRole() {
         Long currentUserId = BaseContext.getCurrentUserId();
-        if (currentUserId == null) {
-            throw new BusinessException("未登录或登录已过期");
-        }
         Integer role = loginDAO.selectUserById(currentUserId).getRole();
         if (role == null) {
-            throw new BusinessException("用户角色不存在");
+            return Result.failure("用户角色不存在");
         }
-        return role;
+        return Result.success(role);
     }
     /**
      * 获取当前用户可访问的老人档案ID列表
      */
-    private List<Long> getAccessibleElderIds(){
+    private Result<?> getAccessibleElderIds(){
         Long currentUserId = BaseContext.getCurrentUserId();
-        Integer role = getCurrentUserRole();
+        Result<?> result1 = getCurrentUserRole();
+        //登录出问题的时候
+        if(result1.getSuccess()!=Result.SUCCESS_CODE){
+            return result1;
+        }
+        Integer role = (Integer) result1.getData();
         List<Long> elderIds = new ArrayList<>();
         if (role == 1) { // 老人：只能看到自己的药品
             //去elderinfo表找到对应的档案id
@@ -68,12 +72,12 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
                     .map(FamilyBind::getElderId)
                     .collect(Collectors.toList());
             if (elderIds.isEmpty()) {
-                throw new BusinessException("您尚未绑定任何老人，无法查看药品");
+                return Result.success(elderIds);
             }
         }else {
-            throw new BusinessException("无权限访问");
+            return Result.failure("无权限访问");
         }
-        return elderIds;
+        return Result.success(elderIds);
     }
 
     /**
@@ -83,13 +87,24 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
     @Transactional
     public Result<?> addMedicineInfo(MedicineAddDTO medicineAddDTO) {
         Long currentUserId = BaseContext.getCurrentUserId();
-        Integer currentRole = getCurrentUserRole();
+
+        Result<?> result1 = getCurrentUserRole();
+        //登录出问题的时候
+        if(result1.getSuccess()!=Result.SUCCESS_CODE){
+            return result1;
+        }
+        Integer currentRole = (Integer) result1.getData();
+
         MedicineInfo medicine = new MedicineInfo();
         BeanUtils.copyProperties(medicineAddDTO, medicine);
         medicine.setQuantity(medicineAddDTO.getQuantity()!=null?medicineAddDTO.getQuantity():0);
         if(currentRole==1){
             //老人添加药品
-            List<Long> elderIds = getAccessibleElderIds();
+            Result<?> result2=getAccessibleElderIds();
+            if(result2.getSuccess()!=Result.SUCCESS_CODE){
+                return result2;
+            }
+            List<Long> elderIds =(List<Long>)result2.getData();
             if (elderIds.isEmpty()){
                 return Result.failure("请先添加您的档案，再添加药品");
             }
@@ -134,7 +149,11 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
             return Result.failure("药品不存在");
         }
         //权限校验：检查药品所属档案是否可访问
-        List<Long> accessibleElderIds = getAccessibleElderIds();
+        Result<?> result2=getAccessibleElderIds();
+        if(result2.getSuccess()!=Result.SUCCESS_CODE){
+            return result2;
+        }
+        List<Long> accessibleElderIds =(List<Long>)result2.getData();
         if (!accessibleElderIds.contains(existing.getElderId())) {
             return Result.failure("无权修改该药品");
         }
@@ -157,7 +176,13 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
         if (existing == null) {
             return Result.failure("药品不存在");
         }
-        List<Long> accessibleElderIds = getAccessibleElderIds();
+
+        Result<?> result2=getAccessibleElderIds();
+        if(result2.getSuccess()!=Result.SUCCESS_CODE){
+            return result2;
+        }
+        List<Long> accessibleElderIds =(List<Long>)result2.getData();
+
         if (!accessibleElderIds.contains(existing.getElderId())) {
             return Result.failure("无权删除该药品");
         }
@@ -173,16 +198,22 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      * 根据老人档案ID查询药品列表
      */
     @Override
-    public List<MedicineInfo> getMedicineInfoByElderId(Long elderId) {
+    public Result<?> getMedicineInfoByElderId(Long elderId) {
         if (elderId == null) {
-            return new ArrayList<>();
+            return Result.success(new ArrayList<>());
         }
         // 权限校验：当前用户是否可访问该档案
-        List<Long> accessibleElderIds = getAccessibleElderIds();
-        if (!accessibleElderIds.contains(elderId)) {
-            throw new BusinessException("无权查看该老人的药品");
+
+        Result<?> result2=getAccessibleElderIds();
+        if(result2.getSuccess()!=Result.SUCCESS_CODE){
+            return result2;
         }
-        return medicineInfoDAO.selectByElderId(elderId);
+        List<Long> accessibleElderIds =(List<Long>)result2.getData();
+
+        if (!accessibleElderIds.contains(elderId)) {
+            return Result.failure("无权查看该老人的药品");
+        }
+        return Result.success(medicineInfoDAO.selectByElderId(elderId));
     }
 
     /**
@@ -192,7 +223,14 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
     @Override
     public Result<?> getMyMedicineList() {
         Long currentUserId = BaseContext.getCurrentUserId();
-        Integer role = getCurrentUserRole();
+
+        Result<?> result1 = getCurrentUserRole();
+        //登录出问题的时候
+        if(result1.getSuccess()!=Result.SUCCESS_CODE){
+            return result1;
+        }
+        Integer role = (Integer) result1.getData();
+
         if (role != 1) {
             return Result.failure("只有老人可以查看自己的药品列表");
         }
@@ -209,16 +247,21 @@ public class MedicineInfoServiceImpl implements MedicineInfoService {
      * 条件查询药品（支持模糊查询、类型筛选）
      */
     @Override
-    public List<MedicineInfo> getMedicineInfoByCondition(MedicineSelectDTO medicineSelectDTO) {
-        List<Long> accessibleElderIds = getAccessibleElderIds();
+    public Result<?> getMedicineInfoByCondition(MedicineSelectDTO medicineSelectDTO) {
+        Result<?> result2=getAccessibleElderIds();
+        if(result2.getSuccess()!=Result.SUCCESS_CODE){
+            return result2;
+        }
+        List<Long> accessibleElderIds =(List<Long>)result2.getData();
+
         if (accessibleElderIds.isEmpty()) {
-            return new ArrayList<>();
+            return Result.success(new ArrayList<>());
         }
         // 调用 DAO 层多条件查询，传入可访问的档案ID列表
-        return medicineInfoDAO.selectByCondition(
+        return Result.success(medicineInfoDAO.selectByCondition(
                 accessibleElderIds,
                 medicineSelectDTO.getMedicineName(),
                 medicineSelectDTO.getType()
-        );
+        ));
     }
 }

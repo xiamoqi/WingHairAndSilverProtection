@@ -10,7 +10,5 @@ public class BindElderInfoDTO {
     private Long elderInfoId;   // 档案ID (elder_info.id)
     private Long userId;        // 老人账号ID (可为空)
     private String username;    // 老人用户名
-    private String nickname;    // 昵称
-    private Integer age;        // 年龄
 
 }

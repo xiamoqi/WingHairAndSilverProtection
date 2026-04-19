@@ -65,9 +65,8 @@ public class MedicineInfoController {
      * 根据老人用户ID查询药品列表
      */
     @GetMapping("/list/elder/{elderId}")
-    public Result<List<MedicineInfo>> getByElderId(@PathVariable Long elderId) {
-        List<MedicineInfo> list = medicineInfoService.getMedicineInfoByElderId(elderId);
-        return Result.success(list);
+    public Result<?> getByElderId(@PathVariable Long elderId) {
+        return medicineInfoService.getMedicineInfoByElderId(elderId);
     }
 
     /**
@@ -83,11 +82,10 @@ public class MedicineInfoController {
      * 自动根据当前用户角色返回可访问的药品
      */
     @PostMapping("/list")
-    public Result<List<MedicineInfo>> getByCondition(@RequestBody(required = false) MedicineSelectDTO selectDTO) {
+    public Result<?> getByCondition(@RequestBody(required = false) MedicineSelectDTO selectDTO) {
         if (selectDTO == null) {
             selectDTO = new MedicineSelectDTO();
         }
-        List<MedicineInfo> list = medicineInfoService.getMedicineInfoByCondition(selectDTO);
-        return Result.success(list);
+        return medicineInfoService.getMedicineInfoByCondition(selectDTO);
     }
 }

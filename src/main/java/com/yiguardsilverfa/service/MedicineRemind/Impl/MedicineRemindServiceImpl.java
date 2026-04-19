@@ -65,7 +65,7 @@ public class MedicineRemindServiceImpl implements MedicineRemindService {
             List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
             elderIds = binds.stream()
                     .filter(bind -> bind.getStatus() == 1)
-                    .map(FamilyBind::getElderId)
+                    .map(FamilyBind::getElderUserId)
                     .collect(Collectors.toList());
             if (elderIds.isEmpty()) {
                 throw new BusinessException("您尚未绑定任何老人，无法查看药品");
@@ -153,6 +153,16 @@ public class MedicineRemindServiceImpl implements MedicineRemindService {
             return new ArrayList<>();
         }
         return medicineRemindDAO.selectByElderId(accessibe.get(0));
+    }
+
+    @Override
+    public MedicineRemind getById(Long id) {
+        return medicineRemindDAO.selectById(id);
+    }
+
+    @Override
+    public List<MedicineRemind> getListByElderId(Long elderId) {
+        return null;
     }
 
 }

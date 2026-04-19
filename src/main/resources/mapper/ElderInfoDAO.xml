@@ -81,4 +81,12 @@
         set status = 1, update_time = NOW()
         where id = #{id} AND status = 0
     </update>
+    <select id="selectElderInfoByIds" resultType="com.yiguardsilverfa.entity.ElderInfo">
+        SELECT * FROM elder_info
+        WHERE id IN
+        <foreach collection="ids" open="(" separator="," close=")" item="id">
+            #{id}
+        </foreach>
+        AND status = 1
+    </select>
 </mapper>

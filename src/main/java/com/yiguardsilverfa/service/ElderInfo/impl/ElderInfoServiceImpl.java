@@ -87,6 +87,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             FamilyBind bind = new FamilyBind();
             bind.setFamilyUserId(currentUserId);
             bind.setElderId(elderInfoId);
+            bind.setElderUserId(currentUserId); // 家属创建的，默认存家属ID
             bind.setRelation(addDTO.getRelation());
             bind.setStatus(1); // 绑定中
             int bindRows = familyBindDAO.insert(bind);
@@ -246,6 +247,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
 
     @Override
+    @Transactional
     public Result<?> bindElderAccount(BindElderAccountDTO bindDTO) {
         Long elderInfoId = bindDTO.getElderInfoId();
         Long elderuserId = bindDTO.getElderuserId();
@@ -269,10 +271,13 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         }
 
         Long currentUserId = BaseContext.getCurrentUserId();
+        // 这里必须用 elder_user_id 查询
         int bind = familyBindDAO.selectByFamilyAndElder(currentUserId, elderInfoId);
         if (bind == 0) {
             return Result.failure("您没有权限绑定此档案");
         }
+
+        // 更新档案归属
         ElderInfo update = new ElderInfo();
         update.setId(elderInfoId);
         update.setUserId(elderuserId);
@@ -280,6 +285,14 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         if (result != 1) {
             return Result.failure("绑定失败，请检查是否输入有误！");
         }
+
+        // 2. 同步更新 family_bind 里的 elder_user_id（关键修复）
+        FamilyBind bindUpdate = new FamilyBind();
+        bindUpdate.setFamilyUserId(currentUserId);
+        bindUpdate.setElderId(elderInfoId);
+        bindUpdate.setElderUserId(elderuserId);
+        familyBindDAO.updateElderUserId(bindUpdate);
+
         return Result.success("绑定成功");
     }
 
@@ -296,7 +309,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         // 获取该家属的绑定关系
         List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
         if (binds == null || binds.isEmpty()) {
-            return Result.success(new ArrayList<>()); // 返回空列表而非失败
+            return Result.success(new ArrayList<>());
         }
         List<BindElderInfoDTO> resultList=new ArrayList<>();
         for(FamilyBind bind : binds){
@@ -312,5 +325,32 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             }
         }
         return Result.success(resultList);
+    }
+
+    @Override
+    public List<ElderInfo> getMyBindElderInfos() {
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer role = getCurrentUserRole();
+
+        // 老人：查自己
+        if (role == 1) {
+            return elderInfoDAO.selectElderInfoByUserId(currentUserId);
+        }
+
+        // 家属：查绑定的老人
+        if (role == 2) {
+            List<FamilyBind> binds = familyBindDAO.selectByFamilyUserId(currentUserId);
+            if (binds == null || binds.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Long> elderIds = binds.stream()
+                    .map(FamilyBind::getElderId)
+                    .collect(Collectors.toList());
+
+            return elderInfoDAO.selectElderInfoByIds(elderIds);
+        }
+
+        return new ArrayList<>();
     }
 }

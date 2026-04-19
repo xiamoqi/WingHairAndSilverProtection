@@ -1,46 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yiguardsilverfa.dao.FamilyBindDAO">
     <resultMap id="FamilyBindMap" type="com.yiguardsilverfa.entity.FamilyBind">
         <id column="id" property="id"/>
         <result column="family_user_id" property="familyUserId"/>
         <result column="elder_id" property="elderId"/>
+        <result column="elder_user_id" property="elderUserId"/>  <!-- 这里加上！ -->
         <result column="relation" property="relation"/>
         <result column="status" property="status"/>
         <result column="create_time" property="createTime"/>
     </resultMap>
 
-    <!--增加档案联系-->
+    <!-- 插入绑定 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO family_bind (family_user_id, elder_id, relation, status, create_time)
-        VALUES (#{familyUserId}, #{elderId}, #{relation}, #{status}, NOW())
+        INSERT INTO family_bind (family_user_id, elder_id, elder_user_id, relation, status, create_time)
+        VALUES (#{familyUserId}, #{elderId}, #{elderUserId}, #{relation}, #{status}, NOW())
     </insert>
 
-    <!--删除老人档案-->
     <update id="deleteByFamilyAndElder">
-        UPDATE family_bind
-        SET status = 0
-        WHERE family_user_id = #{familyUserId}
-          AND elder_id = #{elderId}
-          AND status = 1
+        UPDATE family_bind SET status = 0
+        WHERE family_user_id = #{familyUserId} AND elder_id = #{elderId} AND status = 1
     </update>
 
-    <!--根据userid查找关联elder_id-->
     <select id="selectByFamilyUserId" resultMap="FamilyBindMap">
-        SELECT *
-        FROM family_bind
-        WHERE family_user_id = #{familyUserId}
-          AND status = 1
+        SELECT * FROM family_bind WHERE family_user_id = #{familyUserId} AND status = 1
     </select>
 
-    <!--通过家属id和老人档案id去看家属与老人是否有关联-->
+    <!-- 根据 家属ID + 老人用户ID 查询是否绑定 -->
     <select id="selectByFamilyAndElder" resultType="int">
         SELECT COUNT(*) FROM family_bind
         WHERE family_user_id = #{familyUserId}
           AND elder_id = #{elderId}
           AND status = 1
     </select>
-
+    <update id="updateElderUserId">
+        UPDATE family_bind
+        SET elder_user_id = #{elderUserId}
+        WHERE family_user_id = #{familyUserId}
+          AND elder_id = #{elderId}
+    </update>
 </mapper>

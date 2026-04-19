@@ -28,4 +28,5 @@ public interface ElderInfoService {
      * 家属获取所有绑定老人的姓名列表
      */
     Result<?> getBoundElderNames();
+    List<ElderInfo> getMyBindElderInfos();
 }

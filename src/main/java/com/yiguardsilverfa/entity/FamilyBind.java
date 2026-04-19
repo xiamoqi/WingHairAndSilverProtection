@@ -8,6 +8,7 @@ public class FamilyBind {
     private Long id;
     private Long familyUserId;
     private Long elderId;
+    private Long elderUserId;
     /**
      * 子女/配偶/其他
      */

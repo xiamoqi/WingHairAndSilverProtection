@@ -154,4 +154,10 @@ public class ElderInfoController {
     public Result<?> getBoundElderNames() {
         return elderInfoService.getBoundElderNames();
     }
+
+    @GetMapping("/my-elders")
+    public Result<?> getMyElderInfos() {
+        List<ElderInfo> list = elderInfoService.getMyBindElderInfos();
+        return Result.success(list);
+    }
 }

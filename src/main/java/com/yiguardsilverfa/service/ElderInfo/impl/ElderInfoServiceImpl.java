@@ -35,6 +35,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     @Autowired
     private LoginDAO loginDAO;
 
+
     /**
      * 获取当前登录用户的角色（通过 userId 查表）
      */
@@ -60,6 +61,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         ElderInfo elderInfo = new ElderInfo();
         BeanUtils.copyProperties(addDTO, elderInfo);
         elderInfo.setStatus(1);
+        Long bindUserId = currentUserId;
         if(currentRole==1){
             elderInfo.setUserId(currentUserId);
             //如果是老人，则检验是否已有档案，若有，则不能添加
@@ -75,10 +77,19 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             }
         } else if (currentRole==2) {
             //如果是家属，那就可以添加档案，同时在family_bind表中添加一条连接数据
-            if(addDTO.getRelation()==null|| addDTO.getRelation().isEmpty()){
-                return Result.failure("家属添加档案时必须填写与老人的关系");
+            if(addDTO.getName() != null && !addDTO.getName().isEmpty()){
+                try {
+                    if (addDTO.getName() != null && !addDTO.getName().isEmpty()) {
+                        User user = loginDAO.selectUserByUsername(addDTO.getName());
+                        if (user != null && user.getRole() == 1) {
+                            bindUserId = user.getId();
+                        }
+                    }
+                } catch (Exception e) {
+                    // 没查到，就用家属ID，不报错
+                }
             }
-            elderInfo.setUserId(currentUserId);
+            elderInfo.setUserId(bindUserId);
             int rows = elderInfoDAO.insertElderInfo(elderInfo);
             if (rows != 1) {
                 return Result.failure("添加档案失败");
@@ -88,7 +99,7 @@ public class ElderInfoServiceImpl implements ElderInfoService {
             FamilyBind bind = new FamilyBind();
             bind.setFamilyUserId(currentUserId);
             bind.setElderId(elderInfoId);
-            bind.setElderUserId(currentUserId); // 家属创建的，默认存家属ID
+            bind.setElderUserId(bindUserId);
             bind.setRelation(addDTO.getRelation());
             bind.setStatus(1); // 绑定中
             int bindRows = familyBindDAO.insert(bind);

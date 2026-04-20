@@ -16,4 +16,6 @@ public class ElderInfoUpdateDTO {
     private String emergencyPhone;
     private String address;
     private String deviceId;
+    //家属修改档案的时候可以修改关系
+    private String relation;
 }

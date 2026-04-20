@@ -111,19 +111,30 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     @Override
     public Result<?> updateElderInfo(ElderInfoUpdateDTO updateDTO) {
         Long currentUserId = BaseContext.getCurrentUserId();
-        int rows = familyBindDAO.selectByFamilyAndElder(currentUserId, updateDTO.getId());
-        if (rows == 0) {
-            return Result.failure("您与该老人没有绑定关系，无法解除");
-        }
         ElderInfo existing=elderInfoDAO.selectElderInfoById(updateDTO.getId());
         if (existing == null) {
             return Result.failure("档案不存在");
         }
+        Integer currentRole = getCurrentUserRole();
+        if (currentRole == 2) {
+            int rows = familyBindDAO.selectByFamilyAndElder(currentUserId, updateDTO.getId());
+            if (rows == 0) {
+                return Result.failure("您与该老人没有绑定关系，无法解除");
+            }
+        }
+
         ElderInfo update = new ElderInfo();
         BeanUtils.copyProperties(updateDTO,update);
         int result = elderInfoDAO.updateElderInfoById(update);
         if (result != 1) {
             return Result.failure("更新档案失败");
+        }
+        //更新关系
+        if(updateDTO.getRelation()!=null&&!updateDTO.getRelation().isEmpty()){
+            int rows = familyBindDAO.updateRelation(currentUserId, updateDTO.getId(), updateDTO.getRelation());
+            if (rows == 0) {
+                throw new BusinessException("未找到有效绑定关系或修改失败");
+            }
         }
         //判断该老人档案是否绑定了老人的账号
         Long elderUserId=existing.getUserId();
@@ -148,7 +159,6 @@ public class ElderInfoServiceImpl implements ElderInfoService {
         }
         //修改返回值有关系
         ElderInfo updatedElder = elderInfoDAO.selectElderInfoById(updateDTO.getId());
-        Integer currentRole = getCurrentUserRole();
         ElderInfoWithRelationDTO result1=new ElderInfoWithRelationDTO();
         BeanUtils.copyProperties(updatedElder,result1);
         if(currentRole==2){

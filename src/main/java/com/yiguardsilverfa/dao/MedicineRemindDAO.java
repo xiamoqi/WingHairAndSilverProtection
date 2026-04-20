@@ -1,5 +1,6 @@
 package com.yiguardsilverfa.dao;
 
+import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindWithNameDTO;
 import com.yiguardsilverfa.entity.MedicineRemind;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -12,4 +13,8 @@ public interface MedicineRemindDAO {
     int deleteMedicineRemind(@Param("id") Long id);
     MedicineRemind selectById(@Param("id") Long id);
     List<MedicineRemind> selectByElderId(@Param("elderId") Long elderId);
+    // 根据提醒ID查询
+    MedicineRemindWithNameDTO selectWithNameById(@Param("id") Long id);
+    // 根据老人档案ID查询提醒
+    List<MedicineRemindWithNameDTO> selectWithNameByElderId(@Param("elderId") Long elderId);
 }

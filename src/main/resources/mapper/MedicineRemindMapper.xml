@@ -13,6 +13,10 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
+<!--带老人姓名的 resultMap-->
+    <resultMap id="WithNameResultMap" type="com.yiguardsilverfa.dto.medicineRemind.MedicineRemindWithNameDTO" extends="BaseResultMap">
+        <result column="elder_name" property="elderName"/>
+    </resultMap>
 
     <!--增加提醒-->
     <insert id="insertMedicineRemind" useGeneratedKeys="true" keyProperty="id">
@@ -46,6 +50,26 @@
     <!--通过老人id查找-->
     <select id="selectByElderId" resultMap="BaseResultMap">
         SELECT * FROM medicine_remind WHERE elder_id = #{elderId} ORDER BY remind_time
+    </select>
+
+    <!-- 根据单个档案ID查询（带老人姓名） -->
+    <select id="selectWithNameByElderId" resultMap="WithNameResultMap">
+        SELECT mr.*,
+               COALESCE(ei.elder_name,u.username) AS elder_name
+        FROM medicine_remind mr
+                 JOIN elder_info ei ON mr.elder_id = ei.id
+                 LEFT JOIN sys_user u ON ei.user_id = u.id
+        WHERE mr.elder_id = #{elderId}
+        ORDER BY mr.remind_time
+    </select>
+    <!-- 根据提醒ID查询（带老人姓名） -->
+    <select id="selectWithNameById" resultMap="WithNameResultMap">
+        SELECT mr.*,
+               COALESCE(ei.elder_name,u.username) AS elder_name
+        FROM medicine_remind mr
+                 JOIN elder_info ei ON mr.elder_id = ei.id
+                 LEFT JOIN sys_user u ON ei.user_id = u.id
+        WHERE mr.id = #{id}
     </select>
 </mapper>
 

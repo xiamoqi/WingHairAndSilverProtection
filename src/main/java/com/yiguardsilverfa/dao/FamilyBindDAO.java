@@ -16,4 +16,7 @@ public interface FamilyBindDAO {
     int selectByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderId") Long elderId);
     void updateElderUserId(FamilyBind bind);
     FamilyBind selectInfoByFamilyAndElder(@Param("familyUserId") Long familyUserId, @Param("elderId") Long elderId);
+    int updateRelation(@Param("familyUserId") Long familyUserId,
+                       @Param("elderId") Long elderId,
+                       @Param("relation") String relation);
 }

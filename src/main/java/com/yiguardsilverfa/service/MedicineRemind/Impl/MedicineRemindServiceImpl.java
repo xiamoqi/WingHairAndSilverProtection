@@ -7,6 +7,7 @@ import com.yiguardsilverfa.dao.MedicineRemindDAO;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindAddDTO;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindQueryDTO;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindUpdateDTO;
+import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindWithNameDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
 import com.yiguardsilverfa.entity.FamilyBind;
 import com.yiguardsilverfa.entity.MedicineRemind;
@@ -125,7 +126,8 @@ public class MedicineRemindServiceImpl implements MedicineRemindService {
         if(medicineRemindDAO.updateMedicineRemind(update)!=1){
             return Result.failure("修改提醒失败");
         }else {
-            return Result.success("修改提醒成功");
+            MedicineRemindWithNameDTO remind = medicineRemindDAO.selectWithNameById(updateDTO.getId());
+            return Result.success(remind);
         }
     }
 
@@ -147,14 +149,13 @@ public class MedicineRemindServiceImpl implements MedicineRemindService {
     }
 
     @Override
-    public List<MedicineRemind> getMyReminds() {
+    public List<MedicineRemindWithNameDTO> getMyReminds() {
         List<Long> accessibe=getAccessibleElderIds();
         if (accessibe.isEmpty()){
             return new ArrayList<>();
         }
-        return medicineRemindDAO.selectByElderId(accessibe.get(0));
+        return medicineRemindDAO.selectWithNameByElderId(accessibe.get(0));
     }
-
     @Override
     public MedicineRemind getById(Long id) {
         return medicineRemindDAO.selectById(id);

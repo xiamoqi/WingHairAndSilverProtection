@@ -3,6 +3,7 @@ package com.yiguardsilverfa.controller;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindAddDTO;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindQueryDTO;
 import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindUpdateDTO;
+import com.yiguardsilverfa.dto.medicineRemind.MedicineRemindWithNameDTO;
 import com.yiguardsilverfa.entity.MedicineRemind;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.service.MedicineRemind.MedicineRemindService;
@@ -62,12 +63,12 @@ public class MedicineRemindController {
     }
 
     @GetMapping("/my-list")
-    public Result<List<MedicineRemind>> getMyReminds(){
+    public Result<List<MedicineRemindWithNameDTO>> getMyReminds(){
         Long userId = BaseContext.getCurrentUserId();
         if (userId == null) {
             return Result.failure(null, "未登录");
         }
-        List<MedicineRemind> list = medicineRemindService.getMyReminds();
+        List<MedicineRemindWithNameDTO> list = medicineRemindService.getMyReminds();
         return Result.success(list);
     }
 

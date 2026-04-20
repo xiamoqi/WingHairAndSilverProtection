@@ -46,4 +46,11 @@
           AND elder_id = #{elderId}
           AND status = 1
     </select>
+    <update id="updateRelation">
+        UPDATE family_bind
+        SET relation = #{relation}
+        WHERE family_user_id = #{familyUserId}
+          AND elder_id = #{elderId}
+          AND status = 1
+    </update>
 </mapper>

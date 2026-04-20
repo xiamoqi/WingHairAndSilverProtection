@@ -5,6 +5,7 @@ import com.yiguardsilverfa.dao.FamilyBindDAO;
 import com.yiguardsilverfa.dao.LoginDAO;
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
+import com.yiguardsilverfa.dto.elder.ElderInfoWithRelationDTO;
 import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
 import com.yiguardsilverfa.dto.familyBind.BindElderInfoDTO;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
@@ -109,6 +110,11 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     @Transactional
     @Override
     public Result<?> updateElderInfo(ElderInfoUpdateDTO updateDTO) {
+        Long currentUserId = BaseContext.getCurrentUserId();
+        int rows = familyBindDAO.selectByFamilyAndElder(currentUserId, updateDTO.getId());
+        if (rows == 0) {
+            return Result.failure("您与该老人没有绑定关系，无法解除");
+        }
         ElderInfo existing=elderInfoDAO.selectElderInfoById(updateDTO.getId());
         if (existing == null) {
             return Result.failure("档案不存在");
@@ -140,7 +146,18 @@ public class ElderInfoServiceImpl implements ElderInfoService {
                 }
             }
         }
-        return Result.success(elderInfoDAO.selectElderInfoById(updateDTO.getId()));
+        //修改返回值有关系
+        ElderInfo updatedElder = elderInfoDAO.selectElderInfoById(updateDTO.getId());
+        Integer currentRole = getCurrentUserRole();
+        ElderInfoWithRelationDTO result1=new ElderInfoWithRelationDTO();
+        BeanUtils.copyProperties(updatedElder,result1);
+        if(currentRole==2){
+            FamilyBind bind=familyBindDAO.selectInfoByFamilyAndElder(currentUserId,updatedElder.getId());
+            if (bind!=null){
+                result1.setRelation(bind.getRelation());
+            }
+        }
+        return Result.success(result1);
     }
 
     /**
@@ -200,21 +217,48 @@ public class ElderInfoServiceImpl implements ElderInfoService {
     }
 
     @Override
-    public ElderInfo getElderInfoById(Long id) {
+    public ElderInfoWithRelationDTO getElderInfoById(Long id) {
 
         ElderInfo info=elderInfoDAO.selectElderInfoById(id);
-
-        return info;
+        if (info == null) {
+            return null;
+        }
+        ElderInfoWithRelationDTO dto=new ElderInfoWithRelationDTO();
+        BeanUtils.copyProperties(info,dto);
+        // 如果当前登录用户是家属，则查询关系
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer currentRole = getCurrentUserRole();
+        if (currentRole != null && currentRole == 2 && currentUserId != null){
+            FamilyBind bind=familyBindDAO.selectInfoByFamilyAndElder(currentUserId,info.getId());
+            if (bind != null) {
+                dto.setRelation(bind.getRelation());
+            }
+        }
+        return dto;
     }
 
     @Override
-    public List<ElderInfo> getElderInfoByUserId(Long userId) {
+    public List<ElderInfoWithRelationDTO> getElderInfoByUserId(Long userId) {
 
-        List<ElderInfo> info=elderInfoDAO.selectElderInfoByUserId(userId);
-        if(info==null||info.isEmpty()) {
+        List<ElderInfo> list=elderInfoDAO.selectElderInfoByUserId(userId);
+        if(list==null||list.isEmpty()) {
             return new ArrayList<>();
         }
-        return info;
+        Long currentUserId = BaseContext.getCurrentUserId();
+        Integer currentRole = getCurrentUserRole();
+        List<ElderInfoWithRelationDTO> result = new ArrayList<>();
+        for(ElderInfo info:list){
+            ElderInfoWithRelationDTO dto = new ElderInfoWithRelationDTO();
+            BeanUtils.copyProperties(info, dto);
+            if (currentRole != null && currentRole == 2 && currentUserId != null){
+                FamilyBind bind = familyBindDAO.selectInfoByFamilyAndElder(currentUserId, info.getId());
+                if (bind != null) {
+                    dto.setRelation(bind.getRelation());
+                }
+            }
+            result.add(dto);
+        }
+        return result;
     }
 
     @Override

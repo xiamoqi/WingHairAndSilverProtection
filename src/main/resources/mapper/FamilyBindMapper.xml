@@ -26,7 +26,7 @@
         SELECT * FROM family_bind WHERE family_user_id = #{familyUserId} AND status = 1
     </select>
 
-    <!-- 根据 家属ID + 老人用户ID 查询是否绑定 -->
+    <!-- 根据 家属ID + 老人档案ID 查询是否绑定 -->
     <select id="selectByFamilyAndElder" resultType="int">
         SELECT COUNT(*) FROM family_bind
         WHERE family_user_id = #{familyUserId}
@@ -39,4 +39,11 @@
         WHERE family_user_id = #{familyUserId}
           AND elder_id = #{elderId}
     </update>
+    <!--返回数据-->
+    <select id="selectInfoByFamilyAndElder" resultMap="FamilyBindMap">
+        SELECT * FROM family_bind
+        WHERE family_user_id = #{familyUserId}
+          AND elder_id = #{elderId}
+          AND status = 1
+    </select>
 </mapper>

@@ -2,6 +2,7 @@ package com.yiguardsilverfa.service.ElderInfo;
 
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
+import com.yiguardsilverfa.dto.elder.ElderInfoWithRelationDTO;
 import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.entity.ElderInfo;
@@ -14,8 +15,8 @@ public interface ElderInfoService {
     Result<?> updateElderInfo(ElderInfoUpdateDTO updateDTO);
     //家属删除关系
     Result<?> deleteElderInfo(Long id);
-    ElderInfo getElderInfoById(Long id);
-    List<ElderInfo> getElderInfoByUserId(Long userId);
+    ElderInfoWithRelationDTO getElderInfoById(Long id);
+    List<ElderInfoWithRelationDTO> getElderInfoByUserId(Long userId);
 
     //管理员恢复删除
     void restoreElderInfo(Long id);

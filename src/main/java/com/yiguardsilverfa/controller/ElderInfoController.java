@@ -3,6 +3,7 @@ package com.yiguardsilverfa.controller;
 
 import com.yiguardsilverfa.dto.elder.ElderInfoAddDTO;
 import com.yiguardsilverfa.dto.elder.ElderInfoUpdateDTO;
+import com.yiguardsilverfa.dto.elder.ElderInfoWithRelationDTO;
 import com.yiguardsilverfa.dto.familyBind.BindElderAccountDTO;
 import com.yiguardsilverfa.dto.user.SearchUserInfoDTO;
 import com.yiguardsilverfa.dto.user.SearchUserNameDTO;
@@ -94,8 +95,7 @@ public class ElderInfoController {
         if (id==null){
             return Result.failure("ID不能为空");
         }
-        ElderInfo info = elderInfoService.getElderInfoById(id);
-        System.out.println("info: " + info);
+        ElderInfoWithRelationDTO info = elderInfoService.getElderInfoById(id);
         if (info == null) {
             return Result.success("档案不存在"); // 或返回空数据，前端自行处理
         }
@@ -108,7 +108,7 @@ public class ElderInfoController {
         if (userId==null){
             return Result.failure("用户ID不能为空");
         }
-        List<ElderInfo> info = elderInfoService.getElderInfoByUserId(userId);
+        List<ElderInfoWithRelationDTO> info = elderInfoService.getElderInfoByUserId(userId);
         return Result.success(info);
     }
 

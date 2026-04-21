@@ -1,6 +1,6 @@
 package com.yiguardsilverfa.controller;
 
-import com.yiguardsilverfa.dto.healthQa.ElderNameDTO;
+import com.yiguardsilverfa.dto.healthQa.ElderIdDTO;
 import com.yiguardsilverfa.dto.healthQa.SelectHealthQaDTO;
 import com.yiguardsilverfa.entity.Result;
 import com.yiguardsilverfa.service.HealthQa.HealthQaService;
@@ -26,12 +26,12 @@ public class HealthQaController {
     /**
      *  家属根据老人姓名查询该老人的问答记录
      */
-    @PostMapping("/family/questions/by-eldername")
-    public Result<?> getFamilyQuestionsByElderId(@RequestBody ElderNameDTO dto) {
-        String eldername = dto.getElderName();
-        if (eldername == null || eldername.trim().isEmpty()) {
-            return Result.failure("用户名不能为空");
+    @PostMapping("/family/questions/by-elderid")
+    public Result<?> getFamilyQuestionsByElderId(@RequestBody ElderIdDTO dto) {
+        Long elderId = dto.getElderId();
+        if (elderId == null || elderId <= 0) {
+            return Result.failure("老人ID不能为空");
         }
-        return healthQaService.getElderQaByElderName(eldername.trim());
+        return healthQaService.getElderQaByElderId(elderId);
     }
 }

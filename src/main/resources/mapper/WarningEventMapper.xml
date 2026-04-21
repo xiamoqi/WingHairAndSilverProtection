@@ -1,0 +1,33 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yiguardsilverfa.dao.WarningEventDAO">
+    <resultMap id="BaseResultMap" type="com.yiguardsilverfa.entity.WarningEvent">
+        <id column="id" property="id"/>
+        <result column="elder_id" property="elderId"/>
+        <result column="type" property="type"/>
+        <result column="content" property="content"/>
+        <result column="location" property="location"/>
+        <result column="handle_status" property="handleStatus"/>
+        <result column="handle_user" property="handleUser"/>
+        <result column="handle_time" property="handleTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO warning_event (elder_id, type, content, location, handle_status, create_time)
+        VALUES (#{elderId}, #{type}, #{content}, #{location}, 0, NOW())
+    </insert>
+
+    <select id="selectByElderId" resultMap="BaseResultMap">
+        SELECT * FROM warning_event WHERE elder_id = #{elderId} ORDER BY create_time DESC
+    </select>
+
+    <select id="selectUnhandledByElderId" resultMap="BaseResultMap">
+        SELECT * FROM warning_event WHERE elder_id = #{elderId} AND handle_status = 0 ORDER BY create_time DESC
+    </select>
+
+    <update id="updateHandleStatus">
+        UPDATE warning_event
+        SET handle_status = #{handleStatus}, handle_user = #{handleUser}, handle_time = NOW()
+        WHERE id = #{id}
+    </update>
+</mapper>

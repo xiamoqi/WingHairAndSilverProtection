@@ -27,26 +27,26 @@ public class HealthQaServiceimpl implements HealthQaService {
     @Autowired
     private ElderInfoDAO elderInfoDAO;
     /**
-     * 通过老人名字获取指定老人的问答记录
+     * 通过老人档案id获取指定老人的问答记录
      */
     @Override
-    public Result<?> getElderQaByElderName(String elderName) {
+    public Result<?> getElderQaByElderId(Long elderId) {
         //获取当前用户id
         Long currentUserId = BaseContext.getCurrentUserId();
         //先获取该老人的id
-        ElderInfo elderInfo = elderInfoDAO.selectElderInfoByName(elderName);
+        ElderInfo elderInfo = elderInfoDAO.selectElderInfoById(elderId);
         if (elderInfo == null) {
             return Result.failure("未找到该老人");
         }
         //检查是否有关联
-        int bindCount =familyBindDAO.selectByFamilyAndElder(currentUserId, elderInfo.getId());
+        int bindCount =familyBindDAO.selectByFamilyAndElder(currentUserId, elderId);
         if(bindCount==0){
             return Result.failure("您尚未绑定该老人，无法查看提问记录");
         }
 
         //再通过id去获取该老人的问答记录
-        return Result.success(healthQaDAO.selectByElderId(elderInfo.getId()));
-
+        List<SelectHealthQaDTO> records = healthQaDAO.selectByElderId(elderId);
+        return Result.success(records);
     }
 
     /**
